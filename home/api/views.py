@@ -98,15 +98,19 @@ def getEvent(request, id):
 @api_view(['POST'])
 def createEvent(request):
     data = request.data
-    id = data['id']
-    # Check if event with the given username already exists
-    existing_event = Event.objects.filter(id=id).exists()
-    if existing_event:
-        return Response({'error': 'Event with this id already exists'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # CODE COMMENTED OUT: CHECKED IF AN EVENT ALREADY EXISTED BUT NOT TOO IMPORTANT AND DECIDED
+    # TO REMOVE BECAUSE USER WOULD HAVE HAD TO CREATE THEIR OWN ID WHICH CAN GET TOO COMPLICATED
+    # id = data['id']
+    # # Check if event with the given username already exists
+    # existing_event = Event.objects.filter(id=id).exists()
+    # if existing_event:
+    #     return Response({'error': 'Event with this id already exists'}, status=status.HTTP_400_BAD_REQUEST)
     
     serializer = EventModelSerializer(data=request.data)
     if serializer.is_valid():
-        creation_user_id = int(data['creation_user'])
+        # creation_user_id = int(data['creation_user'])
+        creation_user_id = data['creation_user']
         user = User.objects.get(id=creation_user_id)
         # Create a new event
         event = Event.objects.create(
