@@ -2,18 +2,26 @@ from django.db import models
 from django.forms import ValidationError
 
 # Create your models here.
+# 7/24 - new fields: password, bio, user_privacy, and changes to existing fields
 class User(models.Model):
     USER_TYPE = {
         ('individual', 'individual'),
         ('organization', 'organization')
     }
-    username = models.CharField(max_length=100, unique=True, default='')
-    name = models.CharField(max_length=100)
-    email = models.CharField(max_length=100, unique=True) # In the future update to EmailField
+    USER_PRIVACY = {
+        ('public', 'public'),
+        ('private', 'private')
+    }
+    username = models.CharField(max_length=100, unique=True, blank=False)
+    password = models.CharField(max_length=50, blank=False)
+    name = models.CharField(max_length=100, blank=False)
+    email = models.CharField(max_length=100, unique=True, blank=False) # In the future update to EmailField
     phone_number = models.CharField(max_length=25, unique=True)
+    bio = models.TextField(max_length=1000, default='')
     list_of_followers = models.ManyToManyField('self', symmetrical=False, related_name='following', blank=True)
     list_of_following = models.ManyToManyField('self', symmetrical=False, related_name='followers', blank=True)
-    user_type = models.CharField(max_length=100, choices=USER_TYPE, default='individual')
+    user_type = models.CharField(max_length=50, choices=USER_TYPE, default='individual')
+    user_privacy = models.CharField(max_length=50, choices=USER_PRIVACY, default='public')
     created_events = models.ManyToManyField('Event', related_name='creators', blank=True)
     attending_events = models.ManyToManyField('Event', related_name='attending', blank=True)
 
@@ -41,9 +49,9 @@ class User(models.Model):
 
 class Event(models.Model):
     creation_user = models.ForeignKey(User, related_name='events', on_delete=models.CASCADE)
-    event_name = models.CharField(max_length=200, default='')
+    event_name = models.CharField(max_length=200, default='', blank=False)
     event_description = models.TextField(blank=True)
-    location = models.TextField()
+    location = models.TextField(blank=False)
     date = models.DateTimeField(auto_now=True)
     list_of_attendees = models.ManyToManyField(User, blank=True)
 

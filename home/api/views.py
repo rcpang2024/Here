@@ -12,8 +12,8 @@ def getUsers(request):
     return Response(serializer.data)
 
 @api_view(['GET'])
-def getUser(request, username):
-    user = User.objects.get(username=username)
+def getUser(request, id):
+    user = User.objects.get(id=id)
     serializer = UserModelSerializer(user, many=False)
     return Response(serializer.data)
 
@@ -109,7 +109,6 @@ def createEvent(request):
     
     serializer = EventModelSerializer(data=request.data)
     if serializer.is_valid():
-        # creation_user_id = int(data['creation_user'])
         creation_user_id = data['creation_user']
         user = User.objects.get(id=creation_user_id)
         # Create a new event
@@ -120,6 +119,7 @@ def createEvent(request):
             location=data['location'],
             date=data['date'],
         )
+        user.created_events
         attendees=data['list_of_attendees']
         event.list_of_attendees.set(attendees)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
