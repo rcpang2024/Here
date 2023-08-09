@@ -16,8 +16,8 @@ class User(models.Model):
     password = models.CharField(max_length=50, blank=False)
     name = models.CharField(max_length=100, blank=False)
     email = models.CharField(max_length=100, unique=True, blank=False) # In the future update to EmailField
-    phone_number = models.CharField(max_length=25, unique=True)
-    bio = models.TextField(max_length=1000, default='')
+    bio = models.TextField(max_length=1000, default='', blank=True)
+    profile_pic = models.ImageField(null=True, blank=True)
     list_of_followers = models.ManyToManyField('self', symmetrical=False, related_name='following', blank=True)
     list_of_following = models.ManyToManyField('self', symmetrical=False, related_name='followers', blank=True)
     user_type = models.CharField(max_length=50, choices=USER_TYPE, default='individual')
@@ -42,9 +42,9 @@ class User(models.Model):
         
     def save(self, *args, **kwargs):
         self.full_clean()  # Validate the model
-        if not self.id:
-            # Set the ID before saving if it's a new instance
-            self.id = self._meta.model.objects.all().order_by("-id").first().id + 1
+        # if not self.id:
+        #     # Set the ID before saving if it's a new instance
+        #     self.id = self._meta.model.objects.all().order_by("-id").first().id + 1
         super().save(*args, **kwargs)
 
 class Event(models.Model):
@@ -52,7 +52,7 @@ class Event(models.Model):
     event_name = models.CharField(max_length=200, default='', blank=False)
     event_description = models.TextField(blank=True)
     location = models.TextField(blank=False)
-    date = models.DateTimeField(auto_now=True)
+    date = models.DateTimeField(blank=True, null=True)
     list_of_attendees = models.ManyToManyField(User, blank=True)
 
     # Method to dynamically set the max_length of the list_of_attendees list
