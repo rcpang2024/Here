@@ -3,6 +3,7 @@ from ..models import User, Event
 from .serializers import UserModelSerializer, EventModelSerializer
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from django.db.models import Q
 
 # USER API ENDPOINTS
 @api_view(['GET'])
@@ -22,6 +23,25 @@ def getUserByUsername(request, username):
     user = User.objects.get(username=username)
     serializer = UserModelSerializer(user, many=False)
     return Response(serializer.data)
+
+@api_view(['GET'])
+def search(request):
+    query = request.GET.get('query', '')
+    if query:
+        users = User.objects.filter(Q(username__icontains=query) | Q(name__icontains=query))
+        # events = Event.objects.filter(Q(event_name__icontains=query) | Q(description__icontains=query))
+        
+        user_serializer = UserModelSerializer(users, many=True)
+        # event_serializer = EventModelSerializer(events, many=True)
+        
+        # combined_results = {
+        #     'users': user_serializer.data,
+        #     'events': event_serializer.data
+        # }
+        
+        return Response(user_serializer.data)
+    else:
+        return Response({'users': [], 'events': []}, status=200)
 
 @api_view(['POST'])
 def createUser(request):
@@ -64,13 +84,13 @@ def createUser(request):
 #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
-def updateUser(request, id):
+def updateUser(request, username):
     data = request.data
-    user = User.objects.get(id=id)
+    user = User.objects.get(username=username)
     serializer = UserModelSerializer(user, data=request.data)
     if serializer.is_valid():
         user.username = data['username']
-        user.username = data['password']
+        user.password = data['password']
         user.name = data['name']
         user.email = data['email']
         user.bio = data['bio']
@@ -80,33 +100,33 @@ def updateUser(request, id):
         # Save the user object to update the fields
         user.save()
         
-        followers = data['list_of_followers']
-        following = data['list_of_following']
-        created = data['created_events']
-        attending = data['attending_events']
+        # followers = data['list_of_followers']
+        # following = data['list_of_following']
+        # created = data['created_events']
+        # attending = data['attending_events']
         
         # Update the many-to-many relationships
-        user.list_of_followers.set(followers)
-        user.list_of_following.set(following)
-        user.created_events.set(created)
-        user.attending_events.set(attending)
+        # user.list_of_followers.set(followers)
+        # user.list_of_following.set(following)
+        # user.created_events.set(created)
+        # user.attending_events.set(attending)
         
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
-def followUser(request, your_id, user_id):
-    yourself = User.objects.get(id=your_id)
-    user = User.objects.get(id=user_id)
+def followUser(request, your_username, user_username):
+    yourself = User.objects.get(username=your_username)
+    user = User.objects.get(username=user_username)
 
     yourself.list_of_following.add(user)
     user.list_of_followers.add(yourself)
     return Response('Successfully followed user', status=status.HTTP_201_CREATED)
 
 @api_view(['DELETE'])
-def unfollowUser(request, your_id, user_id):
-    yourself = User.objects.get(id=your_id)
-    user = User.objects.get(id=user_id)
+def unfollowUser(request, your_username, user_username):
+    yourself = User.objects.get(username=your_username)
+    user = User.objects.get(username=user_username)
 
     yourself.list_of_following.remove(user)
     user.list_of_followers.remove(yourself)
@@ -178,18 +198,18 @@ def updateEvent(request, id):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
-def registerUserForEvent(request, event_id, user_id):
+def registerUserForEvent(request, event_id, user_username):
     event = Event.objects.get(id=event_id)
-    user = User.objects.get(id=user_id)
+    user = User.objects.get(username=user_username)
 
     event.list_of_attendees.add(user)
     user.attending_events.add(event)
     return Response('User successfully registered for the event', status=status.HTTP_201_CREATED)
 
 @api_view(['DELETE'])
-def unregisterUserForEvent(request, event_id, user_id):
+def unregisterUserForEvent(request, event_id, user_username):
     event = Event.objects.get(id=event_id)
-    user = User.objects.get(id=user_id)
+    user = User.objects.get(username=user_username)
 
     event.list_of_attendees.remove(user)
     user.attending_events.remove(event)
