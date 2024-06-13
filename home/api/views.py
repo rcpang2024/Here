@@ -25,23 +25,25 @@ def getUserByUsername(request, username):
     return Response(serializer.data)
 
 @api_view(['GET'])
-def search(request):
+def searchUsers(request):
     query = request.GET.get('query', '')
     if query:
-        users = User.objects.filter(Q(username__icontains=query) | Q(name__icontains=query))
-        # events = Event.objects.filter(Q(event_name__icontains=query) | Q(description__icontains=query))
-        
-        user_serializer = UserModelSerializer(users, many=True)
-        # event_serializer = EventModelSerializer(events, many=True)
-        
-        # combined_results = {
-        #     'users': user_serializer.data,
-        #     'events': event_serializer.data
-        # }
-        
+        users = User.objects.filter(Q(username__icontains=query) | Q(name__icontains=query))        
+        user_serializer = UserModelSerializer(users, many=True)        
         return Response(user_serializer.data)
     else:
-        return Response({'users': [], 'events': []}, status=200)
+        return Response([], status=200)
+    
+@api_view(['GET'])
+def searchEvents(request):
+    query = request.GET.get('query', '')
+    if query:
+        events = Event.objects.filter(Q(event_name__icontains=query)
+                                      | Q(event_description__icontains=query) | Q(location__icontains=query))
+        event_serializer = EventModelSerializer(events, many=True)
+        return Response(event_serializer.data)
+    else:
+        return Response([], status=200)
 
 @api_view(['POST'])
 def createUser(request):

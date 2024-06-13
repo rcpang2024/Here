@@ -19,5 +19,6 @@ urlpatterns = [
     path('registeruser/<str:event_id>/<str:user_username>/', views.registerUserForEvent, name="register-event"),
     path('unregisteruser/<str:event_id>/<str:user_username>/', views.unregisterUserForEvent, name="unregister-event"),
     path('deleteevent/<str:id>/', views.deleteEvent, name="delete-event"),
-    path('search', views.search, name='search')
+    path('searchusers', views.searchUsers, name='search-users'),
+    path('searchevents', views.searchEvents, name='search-events')
 ]
