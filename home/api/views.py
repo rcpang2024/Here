@@ -28,11 +28,11 @@ def getUserByUsername(request, username):
 def searchUsers(request):
     query = request.GET.get('query', '')
     if query:
-        users = User.objects.filter(Q(username__icontains=query) | Q(name__icontains=query))        
+        users = User.objects.filter(Q(username__istartswith=query) | Q(name__istartswith=query))        
         user_serializer = UserModelSerializer(users, many=True)        
         return Response(user_serializer.data)
     else:
-        return Response([], status=200)
+        return Response([], status=204)
     
 @api_view(['GET'])
 def searchEvents(request):
