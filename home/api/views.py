@@ -1,8 +1,9 @@
 from rest_framework import status
 from ..models import User, Event
 from .serializers import UserModelSerializer, EventModelSerializer
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 
 # USER API ENDPOINTS
@@ -52,38 +53,6 @@ def createUser(request):
         serializer.save()  # Save the validated object
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-# @api_view(['POST'])
-# def createUser(request):
-#     data = request.data
-#     username = data['username']
-#     # Check if user with the given username already exists
-#     existing_user = User.objects.filter(username=username).exists()
-#     if existing_user:
-#         return Response({'error': 'User with this username already exists'}, status=status.HTTP_400_BAD_REQUEST)
-#     # Create a new user
-    
-#     serializer = UserModelSerializer(data=request.data)
-#     if serializer.is_valid():
-#         user = User.objects.create(
-#         username=data['username'],
-#         password=data['password'],
-#         name=data['name'],
-#         email=data['email'],
-#         phone_number=data['phone_number'],
-#         bio=data['bio'],
-#         user_type=data['user_type'],
-#         user_privacy=data['user_privacy'],
-#         )
-#         followers=data['list_of_followers']
-#         following=data['list_of_following']
-#         created=data['created_events']
-#         attending=data['attending_events']
-#         user.list_of_followers.set(followers)
-#         user.list_of_following.set(following)
-#         user.created_events.set(created)
-#         user.attending_events.set(attending)
-#         return Response(serializer.data, status=status.HTTP_201_CREATED)
-#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
 def updateUser(request, username):
@@ -101,18 +70,6 @@ def updateUser(request, username):
         
         # Save the user object to update the fields
         user.save()
-        
-        # followers = data['list_of_followers']
-        # following = data['list_of_following']
-        # created = data['created_events']
-        # attending = data['attending_events']
-        
-        # Update the many-to-many relationships
-        # user.list_of_followers.set(followers)
-        # user.list_of_following.set(following)
-        # user.created_events.set(created)
-        # user.attending_events.set(attending)
-        
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -226,3 +183,12 @@ def deleteEvent(request, id):
     user.created_events.remove(event)
     event.delete()
     return Response('Event successfully deleted')
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def friends_events(request):
+    user = request.user
+    following_ids = user.list_of_following.values_list('id', flat=True)
+    events = Event.objects.filter(creation_user__id__in=following_ids)
+    serializer = EventModelSerializer(events, many=True)
+    return Response(serializer.data)

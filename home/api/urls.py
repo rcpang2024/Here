@@ -1,5 +1,6 @@
 from . import views
 from django.urls import path
+from rest_framework_simplejwt.views import (TokenObtainPairView, TokenRefreshView)
 
 # python manage.py runserver 192.168.1.142:8000
 
@@ -19,6 +20,9 @@ urlpatterns = [
     path('registeruser/<str:event_id>/<str:user_username>/', views.registerUserForEvent, name="register-event"),
     path('unregisteruser/<str:event_id>/<str:user_username>/', views.unregisterUserForEvent, name="unregister-event"),
     path('deleteevent/<str:id>/', views.deleteEvent, name="delete-event"),
-    path('searchusers', views.searchUsers, name='search-users'),
-    path('searchevents', views.searchEvents, name='search-events')
+    path('searchusers/', views.searchUsers, name='search-users'),
+    path('searchevents/', views.searchEvents, name='search-events'),
+    path('friendsevents/', views.friends_events, name='friends-events'),
+    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh')
 ]
