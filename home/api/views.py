@@ -110,29 +110,51 @@ def getEvent(request, id):
     serializer = EventModelSerializer(event, many=False)
     return Response(serializer.data)
 
+# @api_view(['POST'])
+# def createEvent(request):
+#     data = request.data
+#     serializer = EventModelSerializer(data=request.data)
+
+#     if serializer.is_valid():
+#         creation_user_id = data['creation_user']
+#         user = User.objects.get(id=creation_user_id)
+#         # Create a new event
+#         event = Event.objects.create(
+#             creation_user=user,
+#             event_name=data['event_name'],
+#             event_description=data['event_description'],
+#             location=data['location'],
+#             date=data['date'],
+#         )
+#         attendees=data['list_of_attendees']
+#         event.list_of_attendees.set(attendees)
+
+#         # Adds the event to the created_events field for the creation user
+#         user.created_events.add(event)
+#         user.save()
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(['POST'])
 def createEvent(request):
     data = request.data
-    serializer = EventModelSerializer(data=request.data)
+    serializer = EventModelSerializer(data=data)
 
     if serializer.is_valid():
         creation_user_id = data['creation_user']
         user = User.objects.get(id=creation_user_id)
-        # Create a new event
-        event = Event.objects.create(
-            creation_user=user,
-            event_name=data['event_name'],
-            event_description=data['event_description'],
-            location=data['location'],
-            date=data['date'],
-        )
-        attendees=data['list_of_attendees']
-        event.list_of_attendees.set(attendees)
+
+        # Create a new event using serializer
+        event = serializer.save(creation_user=user)
 
         # Adds the event to the created_events field for the creation user
         user.created_events.add(event)
         user.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        # Refresh the serializer with the created event
+        event_serializer = EventModelSerializer(event)
+        return Response(event_serializer.data, status=status.HTTP_201_CREATED)
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
