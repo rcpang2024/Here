@@ -110,31 +110,6 @@ def getEvent(request, id):
     serializer = EventModelSerializer(event, many=False)
     return Response(serializer.data)
 
-# @api_view(['POST'])
-# def createEvent(request):
-#     data = request.data
-#     serializer = EventModelSerializer(data=request.data)
-
-#     if serializer.is_valid():
-#         creation_user_id = data['creation_user']
-#         user = User.objects.get(id=creation_user_id)
-#         # Create a new event
-#         event = Event.objects.create(
-#             creation_user=user,
-#             event_name=data['event_name'],
-#             event_description=data['event_description'],
-#             location=data['location'],
-#             date=data['date'],
-#         )
-#         attendees=data['list_of_attendees']
-#         event.list_of_attendees.set(attendees)
-
-#         # Adds the event to the created_events field for the creation user
-#         user.created_events.add(event)
-#         user.save()
-#         return Response(serializer.data, status=status.HTTP_201_CREATED)
-#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 @api_view(['POST'])
 def createEvent(request):
     data = request.data
@@ -161,20 +136,17 @@ def createEvent(request):
 def updateEvent(request, id):
     data = request.data
     event = Event.objects.get(id=id)
-    serializer = EventModelSerializer(event, data=request.data)
+    serializer = EventModelSerializer(event, data=request.data, partial=True)
     if serializer.is_valid():
-        creation_user_id = int(data['creation_user'])
-        user = User.objects.get(id=creation_user_id)
-        event.creation_user = user
         event.event_name = data['event_name']
         event.event_description = data['event_description']
         event.location = data['location']
         event.date = data['date']
         
+        if 'list_of_attendees' in data:
+            list_of_attendees = data['list_of_attendees']
+            event.list_of_attendees.set(list_of_attendees)
         event.save()
-
-        list_of_attendees = data['list_of_attendees']
-        event.list_of_attendees.set(list_of_attendees)
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
