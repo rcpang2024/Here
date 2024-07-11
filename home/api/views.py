@@ -110,6 +110,22 @@ def getEvent(request, id):
     serializer = EventModelSerializer(event, many=False)
     return Response(serializer.data)
 
+@api_view(['GET'])
+def getEventsOfFollowing(request, username):
+    user = User.objects.get(username=username)
+    followedUsers = user.list_of_following.all()
+    events = Event.objects.filter(creation_user__in=followedUsers)
+    serializer = EventModelSerializer(events, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+def getFriendsAttendingEvent(request, username):
+    user = User.objects.get(username=username)
+    followedUsers = user.list_of_following.all()
+    events_that_friends_are_attending = Event.objects.filter(list_of_attendees__in=followedUsers).distinct()
+    serializer = EventModelSerializer(events_that_friends_are_attending, many=True)
+    return Response(serializer.data)
+
 @api_view(['POST'])
 def createEvent(request):
     data = request.data
@@ -178,11 +194,11 @@ def deleteEvent(request, id):
     event.delete()
     return Response('Event successfully deleted')
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def friends_events(request):
-    user = request.user
-    following_ids = user.list_of_following.values_list('id', flat=True)
-    events = Event.objects.filter(creation_user__id__in=following_ids)
-    serializer = EventModelSerializer(events, many=True)
-    return Response(serializer.data)
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def friends_events(request):
+#     user = request.user
+#     following_ids = user.list_of_following.values_list('id', flat=True)
+#     events = Event.objects.filter(creation_user__id__in=following_ids)
+#     serializer = EventModelSerializer(events, many=True)
+#     return Response(serializer.data)

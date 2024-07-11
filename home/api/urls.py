@@ -22,7 +22,8 @@ urlpatterns = [
     path('deleteevent/<str:id>/', views.deleteEvent, name="delete-event"),
     path('searchusers/', views.searchUsers, name='search-users'),
     path('searchevents/', views.searchEvents, name='search-events'),
-    path('friendsevents/', views.friends_events, name='friends-events'),
+    path('friendsevents/<str:username>/', views.getEventsOfFollowing, name='friends-events'),
+    path('friends_attending_events/<str:username>/', views.getFriendsAttendingEvent, name='friends-attending'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh')
 ]
