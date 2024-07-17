@@ -24,6 +24,7 @@ urlpatterns = [
     path('searchevents/', views.searchEvents, name='search-events'),
     path('friendsevents/<str:username>/', views.getEventsOfFollowing, name='friends-events'),
     path('friends_attending_events/<str:username>/', views.getFriendsAttendingEvent, name='friends-attending'),
+    # path('nearby_events/', views.getNearbyEvents, name="nearby-events"),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh')
 ]

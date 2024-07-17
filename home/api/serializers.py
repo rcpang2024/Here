@@ -7,6 +7,12 @@ class UserModelSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class EventModelSerializer(serializers.ModelSerializer):
+    # location = serializers.SerializerMethodField()
     class Meta:
         model = Event
         fields = '__all__'
+
+    # def get_location(self, obj):
+    #     if obj.location:
+    #         return {'latitude': obj.location.y, 'longitude': obj.location.x}
+    #     return None

@@ -1,5 +1,8 @@
-from django.db import models
+from django.contrib.gis.db import models
 from django.forms import ValidationError
+# from django.contrib.gis.db import models as gis_models
+# from geopy.geocoders import Nominatim
+# from django.contrib.gis.geos import Point
 
 # Create your models here.
 # 7/24 - new fields: password, bio, user_privacy, and changes to existing fields
@@ -51,7 +54,8 @@ class Event(models.Model):
     creation_user = models.ForeignKey(User, related_name='events', on_delete=models.CASCADE)
     event_name = models.CharField(max_length=200, default='', blank=False)
     event_description = models.TextField(blank=True)
-    location = models.TextField(blank=False)
+    location_addr = models.TextField(blank=False)
+    location_point = models.PointField(blank=True, null=True)
     date = models.DateTimeField(blank=True, null=True)
     list_of_attendees = models.ManyToManyField(User, blank=True)
 
@@ -69,6 +73,13 @@ class Event(models.Model):
         max_length = self.list_of_attendees_max_length()
         if self.list_of_attendees.count() > max_length:
             raise ValidationError(f'Upgrade to let more people follow your event')
+        
+    # def get_location_point(self, location):
+    #     geolocator = Nominatim(user_agent="myGeocoder")
+    #     geocode_result = geolocator.geocode(location)
+    #     if geocode_result:
+    #         return Point(geocode_result.longitude, geocode_result.latitude)
+    #     return None
     
     # Saves the object first and then validates
     def save(self, *args, **kwargs):

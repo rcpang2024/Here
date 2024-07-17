@@ -5,6 +5,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
+from django.contrib.gis.geos import Point
+from django.contrib.gis.db.models.functions import Distance
 
 # USER API ENDPOINTS
 @api_view(['GET'])
@@ -126,6 +128,16 @@ def getFriendsAttendingEvent(request, username):
     serializer = EventModelSerializer(events_that_friends_are_attending, many=True)
     return Response(serializer.data)
 
+@api_view(['GET'])
+def getNearbyEvents(request):
+    lat = request.data.get('latitude')
+    lon = request.data.get('longitude')
+    user_location = Point(lon, lat, srid=4326)
+    radius = 50000
+    events = Event.objects.annotate(distance=Distance('location_point', user_location)).filter(distance__lte=radius).order_by('distance')[:10]
+    serializer = EventModelSerializer(events, many=True)
+    return Response(serializer.data)
+
 @api_view(['POST'])
 def createEvent(request):
     data = request.data
@@ -156,7 +168,7 @@ def updateEvent(request, id):
     if serializer.is_valid():
         event.event_name = data['event_name']
         event.event_description = data['event_description']
-        event.location = data['location']
+        event.location_addr = data['location']
         event.date = data['date']
         
         if 'list_of_attendees' in data:
