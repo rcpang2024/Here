@@ -42,7 +42,7 @@ def searchEvents(request):
     query = request.GET.get('query', '')
     if query:
         events = Event.objects.filter(Q(event_name__icontains=query)
-                                      | Q(event_description__icontains=query) | Q(location__icontains=query))
+                                      | Q(event_description__icontains=query) | Q(location_addr__icontains=query))
         event_serializer = EventModelSerializer(events, many=True)
         return Response(event_serializer.data)
     else:
@@ -129,20 +129,54 @@ def getFriendsAttendingEvent(request, username):
     return Response(serializer.data)
 
 @api_view(['GET'])
-def getNearbyEvents(request):
-    lat = request.data.get('latitude')
-    lon = request.data.get('longitude')
+def getNearbyEvents(request, latitude, longitude):
+    # lat = request.query_params.get('latitude')
+    # lon = request.query_params.get('longitude')
+    lat = float(latitude)
+    lon = float(longitude)
     user_location = Point(lon, lat, srid=4326)
     radius = 50000
     events = Event.objects.annotate(distance=Distance('location_point', user_location)).filter(distance__lte=radius).order_by('distance')[:10]
     serializer = EventModelSerializer(events, many=True)
     return Response(serializer.data)
 
+# @api_view(['POST'])
+# def createEvent(request):
+#     data = request.data
+#     serializer = EventModelSerializer(data=data)
+
+#     if serializer.is_valid():
+#         creation_user_id = data['creation_user']
+#         user = User.objects.get(id=creation_user_id)
+
+#         # Create a new event using serializer
+#         event = serializer.save(creation_user=user)
+
+#         # Adds the event to the created_events field for the creation user
+#         user.created_events.add(event)
+#         user.save()
+
+#         # Refresh the serializer with the created event
+#         event_serializer = EventModelSerializer(event)
+#         return Response(event_serializer.data, status=status.HTTP_201_CREATED)
+
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(['POST'])
 def createEvent(request):
     data = request.data
+    location_point_data = data.get('location_point', {})
+    latitude = location_point_data.get('latitude')
+    longitude = location_point_data.get('longitude')
+    
+    if latitude and longitude:
+        location_point = Point(float(longitude), float(latitude), srid=4326)
+        data['location_point'] = location_point
+    else:
+        data['location_point'] = None
+    
     serializer = EventModelSerializer(data=data)
-
+    
     if serializer.is_valid():
         creation_user_id = data['creation_user']
         user = User.objects.get(id=creation_user_id)

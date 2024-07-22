@@ -2,7 +2,7 @@ from . import views
 from django.urls import path
 from rest_framework_simplejwt.views import (TokenObtainPairView, TokenRefreshView)
 
-# python manage.py runserver 192.168.1.142:8000
+# python manage.py runserver 192.168.1.6:8000
 
 urlpatterns = [
     path('users/', views.getUsers, name="users"),
@@ -24,7 +24,7 @@ urlpatterns = [
     path('searchevents/', views.searchEvents, name='search-events'),
     path('friendsevents/<str:username>/', views.getEventsOfFollowing, name='friends-events'),
     path('friends_attending_events/<str:username>/', views.getFriendsAttendingEvent, name='friends-attending'),
-    # path('nearby_events/', views.getNearbyEvents, name="nearby-events"),
+    path('nearby_events/<str:latitude>/<str:longitude>/', views.getNearbyEvents, name="nearby-events"),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh')
 ]
