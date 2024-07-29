@@ -28,6 +28,12 @@ def getUserByUsername(request, username):
     return Response(serializer.data)
 
 @api_view(['GET'])
+def getUserByEmail(request, email):
+    user = User.objects.get(email=email)
+    serializer = UserModelSerializer(user, many=False)
+    return Response(serializer.data)
+
+@api_view(['GET'])
 def searchUsers(request):
     query = request.GET.get('query', '')
     if query:
@@ -130,8 +136,6 @@ def getFriendsAttendingEvent(request, username):
 
 @api_view(['GET'])
 def getNearbyEvents(request, latitude, longitude):
-    # lat = request.query_params.get('latitude')
-    # lon = request.query_params.get('longitude')
     lat = float(latitude)
     lon = float(longitude)
     user_location = Point(lon, lat, srid=4326)
@@ -139,28 +143,6 @@ def getNearbyEvents(request, latitude, longitude):
     events = Event.objects.annotate(distance=Distance('location_point', user_location)).filter(distance__lte=radius).order_by('distance')[:10]
     serializer = EventModelSerializer(events, many=True)
     return Response(serializer.data)
-
-# @api_view(['POST'])
-# def createEvent(request):
-#     data = request.data
-#     serializer = EventModelSerializer(data=data)
-
-#     if serializer.is_valid():
-#         creation_user_id = data['creation_user']
-#         user = User.objects.get(id=creation_user_id)
-
-#         # Create a new event using serializer
-#         event = serializer.save(creation_user=user)
-
-#         # Adds the event to the created_events field for the creation user
-#         user.created_events.add(event)
-#         user.save()
-
-#         # Refresh the serializer with the created event
-#         event_serializer = EventModelSerializer(event)
-#         return Response(event_serializer.data, status=status.HTTP_201_CREATED)
-
-#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 def createEvent(request):
