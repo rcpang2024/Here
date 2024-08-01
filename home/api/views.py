@@ -66,20 +66,47 @@ def createUser(request):
 def updateUser(request, username):
     data = request.data
     user = User.objects.get(username=username)
-    serializer = UserModelSerializer(user, data=request.data)
+    serializer = UserModelSerializer(user, data=request.data, partial=True)  # Allow partial updates
     if serializer.is_valid():
-        user.username = data['username']
-        user.password = data['password']
-        user.name = data['name']
-        user.email = data['email']
-        user.bio = data['bio']
-        user.user_type = data['user_type']
-        user.user_privacy = data['user_privacy']
+        # Only update the fields that are present in the request data
+        if 'username' in data:
+            user.username = data['username']
+        if 'password' in data:
+            user.password = data['password']
+        if 'name' in data:
+            user.name = data['name']
+        if 'email' in data:
+            user.email = data['email']
+        if 'bio' in data:
+            user.bio = data['bio']
+        if 'user_type' in data:
+            user.user_type = data['user_type']
+        if 'user_privacy' in data:
+            user.user_privacy = data['user_privacy']
         
         # Save the user object to update the fields
         user.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# @api_view(['PUT'])
+# def updateUser(request, username):
+#     data = request.data
+#     user = User.objects.get(username=username)
+#     serializer = UserModelSerializer(user, data=request.data)
+#     if serializer.is_valid():
+#         user.username = data['username']
+#         user.password = data['password']
+#         user.name = data['name']
+#         user.email = data['email']
+#         user.bio = data['bio']
+#         user.user_type = data['user_type']
+#         user.user_privacy = data['user_privacy']
+        
+#         # Save the user object to update the fields
+#         user.save()
+#         return Response(serializer.data)
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 def followUser(request, your_username, user_username):
