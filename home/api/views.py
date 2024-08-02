@@ -89,25 +89,6 @@ def updateUser(request, username):
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# @api_view(['PUT'])
-# def updateUser(request, username):
-#     data = request.data
-#     user = User.objects.get(username=username)
-#     serializer = UserModelSerializer(user, data=request.data)
-#     if serializer.is_valid():
-#         user.username = data['username']
-#         user.password = data['password']
-#         user.name = data['name']
-#         user.email = data['email']
-#         user.bio = data['bio']
-#         user.user_type = data['user_type']
-#         user.user_privacy = data['user_privacy']
-        
-#         # Save the user object to update the fields
-#         user.save()
-#         return Response(serializer.data)
-#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 @api_view(['POST'])
 def followUser(request, your_username, user_username):
     yourself = User.objects.get(username=your_username)
@@ -117,6 +98,15 @@ def followUser(request, your_username, user_username):
     user.list_of_followers.add(yourself)
     return Response('Successfully followed user', status=status.HTTP_201_CREATED)
 
+@api_view(['POST'])
+def requestToFollowUser(request, your_username, user_username):
+    yourself = User.objects.get(username=your_username)
+    user = User.objects.get(username=user_username)
+
+    yourself.requesting_users.add(user)
+    user.follow_requests.add(yourself)
+    return Response('Sucessfully requested to follow user', status=status.HTTP_201_CREATED)
+
 @api_view(['DELETE'])
 def unfollowUser(request, your_username, user_username):
     yourself = User.objects.get(username=your_username)
@@ -125,6 +115,15 @@ def unfollowUser(request, your_username, user_username):
     yourself.list_of_following.remove(user)
     user.list_of_followers.remove(yourself)
     return Response('Successfully unfollowed user')
+
+@api_view(['DELETE'])
+def removeRequestToFollowUser(request, your_username, user_username):
+    yourself = User.objects.get(username=your_username)
+    user = User.objects.get(username=user_username)
+
+    yourself.requesting_users.remove(user)
+    user.follow_requests.remove(yourself)
+    return Response('Successfully removed request to follow user')
 
 @api_view(['DELETE'])
 def deleteUser(request, username):

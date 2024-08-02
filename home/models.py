@@ -6,6 +6,7 @@ from django.forms import ValidationError
 
 # Create your models here.
 # 7/24 - new fields: password, bio, user_privacy, and changes to existing fields
+# 8/2/24 - new fields: follow_requests - others users requesting user; requesting_users - user requesting others
 class User(models.Model):
     USER_TYPE = {
         ('individual', 'individual'),
@@ -27,6 +28,8 @@ class User(models.Model):
     user_privacy = models.CharField(max_length=50, choices=USER_PRIVACY, default='public')
     created_events = models.ManyToManyField('Event', related_name='creators', blank=True)
     attending_events = models.ManyToManyField('Event', related_name='attending', blank=True)
+    follow_requests = models.ManyToManyField('self', symmetrical=False, related_name='received_follow_requests', blank=True)
+    requesting_users = models.ManyToManyField('self', symmetrical=False, related_name='sent_follow_request', blank=True)
 
     # Method to dynamically set the max_length of the created_events list
     def created_events_max_length(self):
