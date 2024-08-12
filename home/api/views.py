@@ -94,8 +94,15 @@ def followUser(request, your_username, user_username):
     yourself = User.objects.get(username=your_username)
     user = User.objects.get(username=user_username)
 
+    if yourself in user.follow_requests.all():
+        user.follow_requests.remove(yourself)
+        yourself.requesting_users.remove(user)
+
     yourself.list_of_following.add(user)
     user.list_of_followers.add(yourself)
+
+    yourself.save()
+    user.save()
     return Response('Successfully followed user', status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
