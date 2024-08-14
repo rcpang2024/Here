@@ -88,3 +88,21 @@ class Event(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         self.full_clean()
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = {
+        ('follower', 'Follower'),
+        ('request', 'Follow Request'),
+        ('event_registration', 'Event Registration')
+    }
+    sender = models.ForeignKey(User, related_name='sent_notifications', on_delete=models.CASCADE)
+    recipient = models.ForeignKey(User, related_name='notifications', on_delete=models.CASCADE)
+    notification_type = models.CharField(max_length=25, choices=NOTIFICATION_TYPES)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.full_clean()
+
+    def __str__(self):
+        return f"{self.sender.username} -> {self.recipient.username}: {self.notification_type}"

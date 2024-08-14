@@ -1,6 +1,6 @@
 from rest_framework import status
-from ..models import User, Event
-from .serializers import UserModelSerializer, EventModelSerializer
+from ..models import User, Event, Notification
+from .serializers import UserModelSerializer, EventModelSerializer, NotificationModelSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -100,6 +100,7 @@ def followUser(request, your_username, user_username):
 
     yourself.list_of_following.add(user)
     user.list_of_followers.add(yourself)
+    Notification.objects.create(sender=yourself, recipient=user, notification_type='follower')
 
     yourself.save()
     user.save()
@@ -112,6 +113,7 @@ def requestToFollowUser(request, your_username, user_username):
 
     yourself.requesting_users.add(user)
     user.follow_requests.add(yourself)
+    Notification.objects.create(sender=yourself, recipient=user, notification_type='request')
     return Response('Sucessfully requested to follow user', status=status.HTTP_201_CREATED)
 
 @api_view(['DELETE'])
@@ -234,6 +236,7 @@ def registerUserForEvent(request, event_id, user_username):
 
     event.list_of_attendees.add(user)
     user.attending_events.add(event)
+    Notification.objects.create(sender=user, recipient=event.creation_user, notification_type='event_registration')
     return Response('User successfully registered for the event', status=status.HTTP_201_CREATED)
 
 @api_view(['DELETE'])
@@ -254,6 +257,18 @@ def deleteEvent(request, id):
     user.created_events.remove(event)
     event.delete()
     return Response('Event successfully deleted')
+
+@api_view(['GET'])
+def followerNotification(request, user_id):
+    user = User.objects.get(id=user_id)
+    follower_notifications = Notification.objects.filter(recipient=user, notification_type='follower').order_by('timestamp')[:15]
+
+    if follower_notifications.exists():
+        serializer = NotificationModelSerializer(follower_notifications, many=True)
+        return Response(serializer.data)
+    return Response([], status=status.HTTP_204_NO_CONTENT)
+    
+
 
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])

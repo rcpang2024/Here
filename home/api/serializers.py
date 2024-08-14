@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import User, Event
+from ..models import User, Event, Notification
 
 class UserModelSerializer(serializers.ModelSerializer):
     class Meta:
@@ -16,3 +16,8 @@ class EventModelSerializer(serializers.ModelSerializer):
     #     if obj.location:
     #         return {'latitude': obj.location.y, 'longitude': obj.location.x}
     #     return None
+
+class NotificationModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = '__all__'
