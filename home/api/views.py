@@ -236,7 +236,7 @@ def registerUserForEvent(request, event_id, user_username):
 
     event.list_of_attendees.add(user)
     user.attending_events.add(event)
-    Notification.objects.create(sender=user, recipient=event.creation_user, notification_type='event_registration')
+    Notification.objects.create(sender=user, recipient=event.creation_user, notification_type='event_registration', event=event)
     return Response('User successfully registered for the event', status=status.HTTP_201_CREATED)
 
 @api_view(['DELETE'])

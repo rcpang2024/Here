@@ -98,6 +98,7 @@ class Notification(models.Model):
     sender = models.ForeignKey(User, related_name='sent_notifications', on_delete=models.CASCADE)
     recipient = models.ForeignKey(User, related_name='notifications', on_delete=models.CASCADE)
     notification_type = models.CharField(max_length=25, choices=NOTIFICATION_TYPES)
+    event = models.ForeignKey(Event, related_name='event_notif', on_delete=models.CASCADE, null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):

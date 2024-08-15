@@ -20,6 +20,7 @@ class EventModelSerializer(serializers.ModelSerializer):
 
 class NotificationModelSerializer(serializers.ModelSerializer):
     sender_username = serializers.CharField(source='sender.username', read_only=True)
+    event_name = serializers.CharField(source='event.event_name', read_only=True)
     class Meta:
         model = Notification
-        fields = ['id', 'notification_type', 'recipient', 'sender', 'sender_username', 'timestamp']
+        fields = ['id', 'notification_type', 'recipient', 'sender', 'sender_username', 'timestamp', 'event', 'event_name']
