@@ -261,15 +261,23 @@ def deleteEvent(request, id):
 @api_view(['GET'])
 def followerNotification(request, user_id):
     user = User.objects.get(id=user_id)
-    follower_notifications = Notification.objects.filter(recipient=user, notification_type='follower').order_by('timestamp')[:15]
+    follower_notifications = Notification.objects.filter(recipient=user, notification_type='follower').order_by('timestamp')[:10]
 
     if follower_notifications.exists():
         serializer = NotificationModelSerializer(follower_notifications, many=True)
         return Response(serializer.data)
     return Response([], status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['GET'])
+def eventRegNotification(request, user_id):
+    user = User.objects.get(id=user_id)
+    event_notifications = Notification.objects.filter(recipient=user, notification_type='event_registration').order_by('timestamp')[:15]
+
+    if event_notifications.exists():
+        serializer = NotificationModelSerializer(event_notifications, many=True)
+        return Response(serializer.data)
+    return Response([], status=status.HTTP_204_NO_CONTENT)
     
-
-
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 # def friends_events(request):
