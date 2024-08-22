@@ -30,6 +30,7 @@ class User(models.Model):
     attending_events = models.ManyToManyField('Event', related_name='attending', blank=True)
     follow_requests = models.ManyToManyField('self', symmetrical=False, related_name='received_follow_requests', blank=True)
     requesting_users = models.ManyToManyField('self', symmetrical=False, related_name='sent_follow_request', blank=True)
+    blocked_users = models.ManyToManyField('self', symmetrical=False, related_name="users_blocked", blank=True)
 
     # Method to dynamically set the max_length of the created_events list
     def created_events_max_length(self):
@@ -76,13 +77,6 @@ class Event(models.Model):
         max_length = self.list_of_attendees_max_length()
         if self.list_of_attendees.count() > max_length:
             raise ValidationError(f'Upgrade to let more people follow your event')
-        
-    # def get_location_point(self, location):
-    #     geolocator = Nominatim(user_agent="myGeocoder")
-    #     geocode_result = geolocator.geocode(location)
-    #     if geocode_result:
-    #         return Point(geocode_result.longitude, geocode_result.latitude)
-    #     return None
     
     # Saves the object first and then validates
     def save(self, *args, **kwargs):
