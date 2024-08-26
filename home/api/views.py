@@ -146,6 +146,11 @@ def blockUser(request, your_username, user_username):
     if yourself in user.follow_requests.all():
         user.follow_requests.remove(yourself)
         yourself.requesting_users.remove(user)
+
+    for event in yourself.created_events.all():
+        if user in event.list_of_attendees.all():
+            event.list_of_attendees.remove(user)
+            user.attending_events.remove(event)
     
     yourself.blocked_users.add(user)
     yourself.save()
@@ -222,6 +227,7 @@ def createEvent(request):
     location_point_data = data.get('location_point', {})
     latitude = location_point_data.get('latitude')
     longitude = location_point_data.get('longitude')
+    event_limit = 3
     
     if latitude and longitude:
         location_point = Point(float(longitude), float(latitude), srid=4326)
@@ -234,6 +240,8 @@ def createEvent(request):
     if serializer.is_valid():
         creation_user_id = data['creation_user']
         user = User.objects.get(id=creation_user_id)
+        if user.created_events.count() >= event_limit:
+            return Response("You can only create a maximum of 3 events", status=status.HTTP_400_BAD_REQUEST)
 
         # Create a new event using serializer
         event = serializer.save(creation_user=user)
@@ -245,7 +253,6 @@ def createEvent(request):
         # Refresh the serializer with the created event
         event_serializer = EventModelSerializer(event)
         return Response(event_serializer.data, status=status.HTTP_201_CREATED)
-
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
