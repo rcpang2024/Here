@@ -26,6 +26,7 @@ urlpatterns = [
     path('unregisteruser/<str:event_id>/<str:user_username>/', views.unregisterUserForEvent, name="unregister-event"),
     path('deleteevent/<str:id>/', views.deleteEvent, name="delete-event"),
     path('searchusers/', views.searchUsers, name='search-users'),
+    path('checkusername', views.checkUsername, name='check-username'),
     path('searchevents/', views.searchEvents, name='search-events'),
     path('friendsevents/<str:username>/', views.getEventsOfFollowing, name='friends-events'),
     path('friends_attending_events/<str:username>/', views.getFriendsAttendingEvent, name='friends-attending'),

@@ -44,6 +44,14 @@ def searchUsers(request):
         return Response([], status=204)
     
 @api_view(['GET'])
+def checkUsername(request):
+    username = request.GET.get('username', None)
+    if username:
+        is_taken = User.objects.filter(username=username).exists()
+        return Response({"is_taken", is_taken})
+    return Response("Invalid username", status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
 def searchEvents(request):
     query = request.GET.get('query', '')
     if query:
