@@ -31,6 +31,7 @@ class User(models.Model):
     follow_requests = models.ManyToManyField('self', symmetrical=False, related_name='received_follow_requests', blank=True)
     requesting_users = models.ManyToManyField('self', symmetrical=False, related_name='sent_follow_request', blank=True)
     blocked_users = models.ManyToManyField('self', symmetrical=False, related_name="users_blocked", blank=True)
+    subscriptions = models.ManyToManyField('self', symmetrical=False, related_name='user_subscriptions', blank=True)
 
     # Method to dynamically set the max_length of the created_events list
     def created_events_max_length(self):

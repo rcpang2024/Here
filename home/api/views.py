@@ -133,7 +133,26 @@ def unfollowUser(request, your_username, user_username):
     user.list_of_followers.remove(yourself)
     return Response('Successfully unfollowed user')
 
-# HAVE TO FIND A WAY TO REMOVE THE BLOCKED USER FROM THE USER'S CREATED EVENTS
+@api_view(['POST'])
+def addUserNotification(request, your_username, user_username):
+    yourself = User.objects.get(username=your_username)
+    user = User.objects.get(username=user_username)
+
+    if user not in yourself.subscriptions.all() and user in yourself.list_of_following.all() and yourself not in user.blocked_users.all():
+        yourself.subscriptions.add(user)
+    yourself.save()
+    return Response("Successfully set notifications for user.")
+
+@api_view(['DELETE'])
+def removeUserNotification(request, your_username, user_username):
+    yourself = User.objects.get(username=your_username)
+    user = User.objects.get(username=user_username)
+
+    if user in yourself.subscriptions.all():
+        yourself.subscriptions.remove(user)
+    yourself.save()
+    return Response("Successfully removed user notifications for this user.")
+
 @api_view(['POST'])
 def blockUser(request, your_username, user_username):
     yourself = User.objects.get(username=your_username)
@@ -147,6 +166,9 @@ def blockUser(request, your_username, user_username):
         yourself.follow_requests.remove(user)
         user.requesting_users.remove(yourself)
     
+    if user in yourself.subscriptions.all():
+        yourself.subscriptions.remove(user)
+    
     if yourself in user.list_of_followers.all():
         user.list_of_followers.remove(yourself)
         yourself.list_of_following.remove(user)
@@ -154,6 +176,9 @@ def blockUser(request, your_username, user_username):
     if yourself in user.follow_requests.all():
         user.follow_requests.remove(yourself)
         yourself.requesting_users.remove(user)
+
+    if yourself in user.subscriptions.all():
+        user.subscriptions.remove(yourself)
 
     for event in yourself.created_events.all():
         if user in event.list_of_attendees.all():
