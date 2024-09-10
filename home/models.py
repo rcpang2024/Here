@@ -21,7 +21,8 @@ class User(models.Model):
     name = models.CharField(max_length=100, blank=False)
     email = models.CharField(max_length=100, unique=True, blank=False) # In the future update to EmailField
     bio = models.TextField(max_length=1000, default='', blank=True)
-    profile_pic = models.ImageField(null=True, blank=True)
+    # profile_pic = models.ImageField(null=True, blank=True)
+    profile_pic = models.CharField(max_length=255, null=True, blank=True)
     list_of_followers = models.ManyToManyField('self', symmetrical=False, related_name='following', blank=True)
     list_of_following = models.ManyToManyField('self', symmetrical=False, related_name='followers', blank=True)
     user_type = models.CharField(max_length=50, choices=USER_TYPE, default='individual')

@@ -354,6 +354,16 @@ def eventRegNotification(request, user_id):
         serializer = NotificationModelSerializer(event_notifications, many=True)
         return Response(serializer.data)
     return Response([], status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['POST'])
+def setImageURI(request, username):
+    user = User.objects.get(username=username)
+    uri = request.data.get('uri')
+    if uri:
+        user.profile_pic = uri
+        user.save()
+        return Response("Profile picture URI set.", status=status.HTTP_200_OK)
+    return Response("No URI provided", status=status.HTTP_400_BAD_REQUEST)
     
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])

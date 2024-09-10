@@ -35,6 +35,7 @@ urlpatterns = [
     path('nearby_events/<str:latitude>/<str:longitude>/', views.getNearbyEvents, name="nearby-events"),
     path('follower_notifications/<str:user_id>/', views.followerNotification, name="follower-notification"),
     path('event_notifications/<str:user_id>/', views.eventRegNotification, name="event-notification"),
+    path('set_picture/<str:username>/', views.setImageURI, name="set-profile-picture"),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh')
 ]
