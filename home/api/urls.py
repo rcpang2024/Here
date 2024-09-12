@@ -2,8 +2,6 @@ from . import views
 from django.urls import path
 from rest_framework_simplejwt.views import (TokenObtainPairView, TokenRefreshView)
 
-# python manage.py runserver 192.168.1.6:8000
-
 urlpatterns = [
     path('users/', views.getUsers, name="users"),
     path('users/id/<str:id>/', views.getUserByID, name="user-id"),

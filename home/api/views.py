@@ -79,8 +79,8 @@ def updateUser(request, username):
         # Only update the fields that are present in the request data
         if 'username' in data:
             user.username = data['username']
-        if 'password' in data:
-            user.password = data['password']
+        # if 'password' in data:
+        #     user.password = data['password']
         if 'name' in data:
             user.name = data['name']
         if 'email' in data:

@@ -17,7 +17,7 @@ class User(models.Model):
         ('private', 'private')
     }
     username = models.CharField(max_length=100, unique=True, blank=False)
-    password = models.CharField(max_length=50, blank=False)
+    # password = models.CharField(max_length=50, blank=False)
     name = models.CharField(max_length=100, blank=False)
     email = models.CharField(max_length=100, unique=True, blank=False) # In the future update to EmailField
     bio = models.TextField(max_length=1000, default='', blank=True)
@@ -33,6 +33,7 @@ class User(models.Model):
     requesting_users = models.ManyToManyField('self', symmetrical=False, related_name='sent_follow_request', blank=True)
     blocked_users = models.ManyToManyField('self', symmetrical=False, related_name="users_blocked", blank=True)
     subscriptions = models.ManyToManyField('self', symmetrical=False, related_name='user_subscriptions', blank=True)
+    expo_push_token = models.CharField(max_length=255, null=True, blank=True)
 
     # Method to dynamically set the max_length of the created_events list
     def created_events_max_length(self):
