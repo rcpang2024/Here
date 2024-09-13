@@ -7,6 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
+import requests
+import json
 
 # USER API ENDPOINTS
 @api_view(['GET'])
@@ -99,7 +101,9 @@ def updateUser(request, username):
 
 @api_view(['POST'])
 def followUser(request, your_username, user_username):
+    # following other user
     yourself = User.objects.get(username=your_username)
+    # user being followed
     user = User.objects.get(username=user_username)
 
     if yourself in user.follow_requests.all():
@@ -110,18 +114,27 @@ def followUser(request, your_username, user_username):
     user.list_of_followers.add(yourself)
     Notification.objects.create(sender=yourself, recipient=user, notification_type='follower')
 
+    if user.expo_push_token:
+        send_push_notifications(user.expo_push_token, 'New Follower', f'{yourself.username} followed you.')
+
     yourself.save()
     user.save()
     return Response('Successfully followed user', status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
 def requestToFollowUser(request, your_username, user_username):
+    # requester
     yourself = User.objects.get(username=your_username)
+    # recipient of request
     user = User.objects.get(username=user_username)
 
     yourself.requesting_users.add(user)
     user.follow_requests.add(yourself)
     Notification.objects.create(sender=yourself, recipient=user, notification_type='request')
+    if user.expo_push_token:
+        send_push_notifications(user.expo_push_token, 
+                                'Follow Request', 
+                                f'{yourself.username} is requesting to follow you.')
     return Response('Sucessfully requested to follow user', status=status.HTTP_201_CREATED)
 
 @api_view(['DELETE'])
@@ -314,6 +327,10 @@ def registerUserForEvent(request, event_id, user_username):
     event.list_of_attendees.add(user)
     user.attending_events.add(event)
     Notification.objects.create(sender=user, recipient=event.creation_user, notification_type='event_registration', event=event)
+    if event.creation_user.expo_push_token:
+        send_push_notifications(event.creation_user.expo_push_token, 
+                                'Event Notification',
+                                f'{user.username} is going your event: {event.event_name}')
     return Response('User successfully registered for the event', status=status.HTTP_201_CREATED)
 
 @api_view(['DELETE'])
@@ -364,6 +381,39 @@ def setImageURI(request, username):
         user.save()
         return Response("Profile picture URI set.", status=status.HTTP_200_OK)
     return Response("No URI provided", status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def setExpoPushToken(request):
+    username = request.data.get('username')
+    pushToken = request.data.get('expo_push_token')
+
+    user = User.objects.get(username=username)
+    user.expo_push_token = pushToken
+    user.save()
+    return Response("Push token successfully saved.", status=status.HTTP_200_OK)
+
+def send_push_notifications(expo_push_token, title, body):
+    url = 'https://exp.host/--/api/v2/push/send'
+
+    headers = {
+        'Accept': 'application/json',
+        'Accept-Encoding': 'gzip, deflate',
+        'Content-Type': 'application/json',
+    }
+
+    payload = {
+        'to': expo_push_token,
+        'sound': 'default',
+        'title': title,
+        'body': body,
+        'data': {'extra_data': 'some value'}
+    }
+    response = requests.post(url, headers=headers, data=json.dumps(payload))
+
+    if response.status_code == 200:
+        return Response("Sentt push notification", status=status.HTTP_200_OK)
+    else:
+        return Response("Failed to send request: ", status=status.HTTP_400_BAD_REQUEST)
     
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
