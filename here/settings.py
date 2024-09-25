@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from datetime import timedelta
 from pathlib import Path
 import os
+import firebase_admin
+from firebase_admin import credentials
+import environ
+import json
 
 if os.name == 'nt':
     import platform
@@ -24,6 +28,13 @@ if os.name == 'nt':
     os.environ['GDAL_DATA'] = OSGEO4W + r"\share\gdal"
     os.environ['PROJ_LIB'] = OSGEO4W + r"\share\proj"
     os.environ['PATH'] = OSGEO4W + r"\bin;" + os.environ['PATH']
+
+# TODO: SECURELY store the service account key and then do a custom middleware to verify it
+env = environ.Env()
+environ.Env.read_env()
+firebase_service_key = env("FIREBASE_SERVICE_KEY")
+cred = credentials.Certificate(json.loads(firebase_service_key))
+firebase_admin.initialize_app(cred)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -97,6 +108,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'middlewares.FirebaseTokenAuthMiddleware'
 ]
 
 ROOT_URLCONF = 'here.urls'

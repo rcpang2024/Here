@@ -269,6 +269,9 @@ def getNearbyEvents(request, latitude, longitude):
 
 @api_view(['POST'])
 def createEvent(request):
+    if not hasattr(request, 'user_id'):
+        return Response("Error, unauthorized access: ", status=status.HTTP_401_UNAUTHORIZED)
+
     data = request.data
     location_point_data = data.get('location_point', {})
     latitude = location_point_data.get('latitude')
