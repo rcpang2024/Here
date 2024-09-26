@@ -7,10 +7,37 @@ from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
+from django.http import JsonResponse
+from firebase_admin import auth as firebase_auth
 import requests
 import json
 
 # USER API ENDPOINTS
+@api_view(['POST'])
+def authenticate_user(request):
+    id_token = request.data.get('idToken')
+
+    if not id_token:
+        return JsonResponse({'error': 'No ID token provided'}, status=400)
+
+    try:
+        # Verify the ID token from the client
+        decoded_token = firebase_auth.verify_id_token(id_token)
+        uid = decoded_token['uid']
+
+        # You can now use the UID to authenticate or get the user from your Django User model
+        # For example, you can create or get the user in your Django app
+        user, created = User.objects.get_or_create(firebase_uid=uid)
+
+        # Return a success response or any other user data
+        return JsonResponse({'message': 'User authenticated successfully', 'uid': uid})
+
+    except firebase_auth.InvalidIdTokenError:
+        return JsonResponse({'error': 'Invalid or expired token'}, status=401)
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 @api_view(['GET'])
 def getUsers(request):
     users = User.objects.all()
