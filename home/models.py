@@ -1,5 +1,6 @@
 from django.contrib.gis.db import models
 from django.forms import ValidationError
+from django.contrib.auth.models import AbstractUser
 # from django.contrib.gis.db import models as gis_models
 # from geopy.geocoders import Nominatim
 # from django.contrib.gis.geos import Point
@@ -34,6 +35,7 @@ class User(models.Model):
     blocked_users = models.ManyToManyField('self', symmetrical=False, related_name="users_blocked", blank=True)
     subscriptions = models.ManyToManyField('self', symmetrical=False, related_name='user_subscriptions', blank=True)
     expo_push_token = models.CharField(max_length=255, null=True, blank=True)
+    is_authenticated = models.BooleanField(default=False, null=True, blank=True)
 
     # Method to dynamically set the max_length of the created_events list
     def created_events_max_length(self):

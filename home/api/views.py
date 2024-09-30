@@ -1,42 +1,50 @@
 from rest_framework import status
+
+from auth_backend import FirebaseAuthentication
 from ..models import User, Event, Notification
 from .serializers import UserModelSerializer, EventModelSerializer, NotificationModelSerializer
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 from django.http import JsonResponse
-from firebase_admin import auth as firebase_auth
+import firebase_admin
+from firebase_admin import auth
 import requests
 import json
 
 # USER API ENDPOINTS
-@api_view(['POST'])
+@api_view(['GET'])
 def authenticate_user(request):
-    id_token = request.data.get('idToken')
+    print(f"Request user_id: {request.user_id}")
+    if request.user_id:
+        return JsonResponse({'message': 'User authenticated successfully', 'uid': request.user_id})
+    else:
+        print("User not authenticated")
+        return JsonResponse({'error': 'User not authenticated'}, status=401)
+    # id_token = request.data.get('idToken')
 
-    if not id_token:
-        return JsonResponse({'error': 'No ID token provided'}, status=400)
+    # if not id_token:
+    #     return JsonResponse({'error': 'No ID token provided'}, status=400)
 
-    try:
-        # Verify the ID token from the client
-        decoded_token = firebase_auth.verify_id_token(id_token)
-        uid = decoded_token['uid']
+    # try:
+    #     # Verify the ID token from the client
+    #     decoded_token = firebase_auth.verify_id_token(id_token)
+    #     uid = decoded_token['uid']
 
-        # You can now use the UID to authenticate or get the user from your Django User model
-        # For example, you can create or get the user in your Django app
-        user, created = User.objects.get_or_create(firebase_uid=uid)
+    #     # You can now use the UID to authenticate or get the user from your Django User model
+    #     # user, created = User.objects.get_or_create(firebase_uid=uid)
 
-        # Return a success response or any other user data
-        return JsonResponse({'message': 'User authenticated successfully', 'uid': uid})
+    #     # Return a success response or any other user data
+    #     return JsonResponse({'message': 'User authenticated successfully', 'uid': uid})
 
-    except firebase_auth.InvalidIdTokenError:
-        return JsonResponse({'error': 'Invalid or expired token'}, status=401)
+    # except firebase_auth.InvalidIdTokenError:
+    #     return JsonResponse({'error': 'Invalid or expired token'}, status=401)
 
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+    # except Exception as e:
+    #     return JsonResponse({'error': str(e)}, status=500)
 
 @api_view(['GET'])
 def getUsers(request):
@@ -52,15 +60,25 @@ def getUserByID(request, id):
 
 @api_view(['GET'])
 def getUserByUsername(request, username):
+    userID = request.user_id
+    if not userID:
+        return Response("Error, unauthorized access: ", status=status.HTTP_401_UNAUTHORIZED)
     user = User.objects.get(username=username)
     serializer = UserModelSerializer(user, many=False)
     return Response(serializer.data)
 
 @api_view(['GET'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def getUserByEmail(request, email):
-    user = User.objects.get(email=email)
-    serializer = UserModelSerializer(user, many=False)
-    return Response(serializer.data)
+    user = request.user  # Now you have the authenticated user
+    print("inside getUserByEmail: ", user)
+    if user.is_authenticated:
+        user = User.objects.get(email=email)
+        serializer = UserModelSerializer(user, many=False)
+        return Response(serializer.data)
+    else:
+        return Response("Error, unauthorized access", status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['GET'])
 def searchUsers(request):
@@ -101,6 +119,8 @@ def createUser(request):
 
 @api_view(['PUT'])
 def updateUser(request, username):
+    # if not hasattr(request, 'user_id'):
+    #     return Response("Error, unauthorized access: ", status=status.HTTP_401_UNAUTHORIZED)
     data = request.data
     user = User.objects.get(username=username)
     serializer = UserModelSerializer(user, data=request.data, partial=True)  # Allow partial updates
@@ -128,6 +148,8 @@ def updateUser(request, username):
 
 @api_view(['POST'])
 def followUser(request, your_username, user_username):
+    # if not hasattr(request, 'user_id'):
+    #     return Response("Error, unauthorized access: ", status=status.HTTP_401_UNAUTHORIZED)
     # following other user
     yourself = User.objects.get(username=your_username)
     # user being followed
@@ -175,6 +197,8 @@ def unfollowUser(request, your_username, user_username):
 
 @api_view(['POST'])
 def addUserNotification(request, your_username, user_username):
+    # if not hasattr(request, 'user_id'):
+    #     return Response("Error, unauthorized access: ", status=status.HTTP_401_UNAUTHORIZED)
     yourself = User.objects.get(username=your_username)
     user = User.objects.get(username=user_username)
 
@@ -269,12 +293,18 @@ def getEvent(request, id):
     return Response(serializer.data)
 
 @api_view(['GET'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def getEventsOfFollowing(request, username):
+    firebaseUser = request.user  # Now you have the authenticated user
     user = User.objects.get(username=username)
-    followedUsers = user.list_of_following.all()
-    events = Event.objects.filter(creation_user__in=followedUsers)
-    serializer = EventModelSerializer(events, many=True)
-    return Response(serializer.data)
+    if firebaseUser.is_authenticated:
+        followedUsers = user.list_of_following.all()
+        events = Event.objects.filter(creation_user__in=followedUsers)
+        serializer = EventModelSerializer(events, many=True)
+        return Response(serializer.data)
+    else:
+        return Response("Unauthorized", status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['GET'])
 def getFriendsAttendingEvent(request, username):
