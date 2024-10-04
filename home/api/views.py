@@ -5,7 +5,7 @@ from ..models import User, Event, Notification
 from .serializers import UserModelSerializer, EventModelSerializer, NotificationModelSerializer
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Q
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
@@ -16,53 +16,27 @@ import requests
 import json
 
 # USER API ENDPOINTS
+
+# For development purposes, not used in app itself
 @api_view(['GET'])
-def authenticate_user(request):
-    print(f"Request user_id: {request.user_id}")
-    if request.user_id:
-        return JsonResponse({'message': 'User authenticated successfully', 'uid': request.user_id})
-    else:
-        print("User not authenticated")
-        return JsonResponse({'error': 'User not authenticated'}, status=401)
-    # id_token = request.data.get('idToken')
-
-    # if not id_token:
-    #     return JsonResponse({'error': 'No ID token provided'}, status=400)
-
-    # try:
-    #     # Verify the ID token from the client
-    #     decoded_token = firebase_auth.verify_id_token(id_token)
-    #     uid = decoded_token['uid']
-
-    #     # You can now use the UID to authenticate or get the user from your Django User model
-    #     # user, created = User.objects.get_or_create(firebase_uid=uid)
-
-    #     # Return a success response or any other user data
-    #     return JsonResponse({'message': 'User authenticated successfully', 'uid': uid})
-
-    # except firebase_auth.InvalidIdTokenError:
-    #     return JsonResponse({'error': 'Invalid or expired token'}, status=401)
-
-    # except Exception as e:
-    #     return JsonResponse({'error': str(e)}, status=500)
-
-@api_view(['GET'])
+@permission_classes([AllowAny])
 def getUsers(request):
     users = User.objects.all()
     serializer = UserModelSerializer(users, many=True)
     return Response(serializer.data)
 
 @api_view(['GET'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def getUserByID(request, id):
     user = User.objects.get(id=id)
     serializer = UserModelSerializer(user, many=False)
     return Response(serializer.data)
 
 @api_view(['GET'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def getUserByUsername(request, username):
-    userID = request.user_id
-    if not userID:
-        return Response("Error, unauthorized access: ", status=status.HTTP_401_UNAUTHORIZED)
     user = User.objects.get(username=username)
     serializer = UserModelSerializer(user, many=False)
     return Response(serializer.data)
@@ -71,16 +45,12 @@ def getUserByUsername(request, username):
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getUserByEmail(request, email):
-    user = request.user  # Now you have the authenticated user
-    print("inside getUserByEmail: ", user)
-    if user.is_authenticated:
-        user = User.objects.get(email=email)
-        serializer = UserModelSerializer(user, many=False)
-        return Response(serializer.data)
-    else:
-        return Response("Error, unauthorized access", status=status.HTTP_401_UNAUTHORIZED)
+    user = User.objects.get(email=email)
+    serializer = UserModelSerializer(user, many=False)
+    return Response(serializer.data)
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def searchUsers(request):
     query = request.GET.get('query', '')
     if query:
@@ -91,6 +61,7 @@ def searchUsers(request):
         return Response([], status=204)
     
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def checkUsername(request):
     username = request.GET.get('username', None)
     if username:
@@ -99,17 +70,20 @@ def checkUsername(request):
     return Response("Invalid username", status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def searchEvents(request):
     query = request.GET.get('query', '')
     if query:
         events = Event.objects.filter(Q(event_name__icontains=query)
-                                      | Q(event_description__icontains=query) | Q(location_addr__icontains=query))
+                                    | Q(event_description__icontains=query) | Q(location_addr__icontains=query))
         event_serializer = EventModelSerializer(events, many=True)
         return Response(event_serializer.data)
     else:
         return Response([], status=200)
 
+# TODO: Reserach defenses against injection attacks
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def createUser(request):
     serializer = UserModelSerializer(data=request.data)
     if serializer.is_valid():
@@ -118,9 +92,9 @@ def createUser(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def updateUser(request, username):
-    # if not hasattr(request, 'user_id'):
-    #     return Response("Error, unauthorized access: ", status=status.HTTP_401_UNAUTHORIZED)
     data = request.data
     user = User.objects.get(username=username)
     serializer = UserModelSerializer(user, data=request.data, partial=True)  # Allow partial updates
@@ -147,12 +121,12 @@ def updateUser(request, username):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def followUser(request, your_username, user_username):
-    # if not hasattr(request, 'user_id'):
-    #     return Response("Error, unauthorized access: ", status=status.HTTP_401_UNAUTHORIZED)
-    # following other user
+    # Following other user
     yourself = User.objects.get(username=your_username)
-    # user being followed
+    # User being followed
     user = User.objects.get(username=user_username)
 
     if yourself in user.follow_requests.all():
@@ -171,10 +145,12 @@ def followUser(request, your_username, user_username):
     return Response('Successfully followed user', status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def requestToFollowUser(request, your_username, user_username):
-    # requester
+    # Requester
     yourself = User.objects.get(username=your_username)
-    # recipient of request
+    # Recipient of request
     user = User.objects.get(username=user_username)
 
     yourself.requesting_users.add(user)
@@ -187,6 +163,8 @@ def requestToFollowUser(request, your_username, user_username):
     return Response('Sucessfully requested to follow user', status=status.HTTP_201_CREATED)
 
 @api_view(['DELETE'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def unfollowUser(request, your_username, user_username):
     yourself = User.objects.get(username=your_username)
     user = User.objects.get(username=user_username)
@@ -196,9 +174,9 @@ def unfollowUser(request, your_username, user_username):
     return Response('Successfully unfollowed user')
 
 @api_view(['POST'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def addUserNotification(request, your_username, user_username):
-    # if not hasattr(request, 'user_id'):
-    #     return Response("Error, unauthorized access: ", status=status.HTTP_401_UNAUTHORIZED)
     yourself = User.objects.get(username=your_username)
     user = User.objects.get(username=user_username)
 
@@ -208,6 +186,8 @@ def addUserNotification(request, your_username, user_username):
     return Response("Successfully set notifications for user.")
 
 @api_view(['DELETE'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def removeUserNotification(request, your_username, user_username):
     yourself = User.objects.get(username=your_username)
     user = User.objects.get(username=user_username)
@@ -218,6 +198,8 @@ def removeUserNotification(request, your_username, user_username):
     return Response("Successfully removed user notifications for this user.")
 
 @api_view(['POST'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def blockUser(request, your_username, user_username):
     yourself = User.objects.get(username=your_username)
     user = User.objects.get(username=user_username)
@@ -255,6 +237,8 @@ def blockUser(request, your_username, user_username):
     return Response('Successfully blocked user', status=status.HTTP_201_CREATED)
 
 @api_view(['DELETE'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def unblockUser(request, your_username, user_username):
     yourself = User.objects.get(username=your_username)
     user = User.objects.get(username=user_username)
@@ -265,6 +249,8 @@ def unblockUser(request, your_username, user_username):
     return Response('Successfully unblocked user')
 
 @api_view(['DELETE'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def removeRequestToFollowUser(request, your_username, user_username):
     yourself = User.objects.get(username=your_username)
     user = User.objects.get(username=user_username)
@@ -280,33 +266,40 @@ def deleteUser(request, username):
     return Response('User successfully deleted')
 
 # EVENT API ENDPOINTS
+# For development, not used in app
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def getEvents(request):
     events = Event.objects.all()
     serializer = EventModelSerializer(events, many=True)
     return Response(serializer.data)
 
 @api_view(['GET'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def getEvent(request, id):
-    event = Event.objects.get(id=id)
-    serializer = EventModelSerializer(event, many=False)
-    return Response(serializer.data)
+    firebaseUser = request.user  # Now you have the authenticated user
+    if firebaseUser.is_authenticated:
+        event = Event.objects.get(id=id)
+        serializer = EventModelSerializer(event, many=False)
+        return Response(serializer.data)
+    else:
+        return Response("Unauthorized to access events", status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getEventsOfFollowing(request, username):
-    firebaseUser = request.user  # Now you have the authenticated user
+    # firebaseUser = request.user  # Now you have the authenticated user
     user = User.objects.get(username=username)
-    if firebaseUser.is_authenticated:
-        followedUsers = user.list_of_following.all()
-        events = Event.objects.filter(creation_user__in=followedUsers)
-        serializer = EventModelSerializer(events, many=True)
-        return Response(serializer.data)
-    else:
-        return Response("Unauthorized", status=status.HTTP_401_UNAUTHORIZED)
+    followedUsers = user.list_of_following.all()
+    events = Event.objects.filter(creation_user__in=followedUsers)
+    serializer = EventModelSerializer(events, many=True)
+    return Response(serializer.data)
 
 @api_view(['GET'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def getFriendsAttendingEvent(request, username):
     user = User.objects.get(username=username)
     followedUsers = user.list_of_following.all()
@@ -315,6 +308,8 @@ def getFriendsAttendingEvent(request, username):
     return Response(serializer.data)
 
 @api_view(['GET'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def getNearbyEvents(request, latitude, longitude):
     lat = float(latitude)
     lon = float(longitude)
@@ -325,10 +320,9 @@ def getNearbyEvents(request, latitude, longitude):
     return Response(serializer.data)
 
 @api_view(['POST'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def createEvent(request):
-    if not hasattr(request, 'user_id'):
-        return Response("Error, unauthorized access: ", status=status.HTTP_401_UNAUTHORIZED)
-
     data = request.data
     location_point_data = data.get('location_point', {})
     latitude = location_point_data.get('latitude')
@@ -362,6 +356,8 @@ def createEvent(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def updateEvent(request, id):
     data = request.data
     event = Event.objects.get(id=id)
@@ -380,6 +376,8 @@ def updateEvent(request, id):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def registerUserForEvent(request, event_id, user_username):
     event = Event.objects.get(id=event_id)
     user = User.objects.get(username=user_username)
@@ -394,6 +392,8 @@ def registerUserForEvent(request, event_id, user_username):
     return Response('User successfully registered for the event', status=status.HTTP_201_CREATED)
 
 @api_view(['DELETE'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def unregisterUserForEvent(request, event_id, user_username):
     event = Event.objects.get(id=event_id)
     user = User.objects.get(username=user_username)
@@ -403,16 +403,20 @@ def unregisterUserForEvent(request, event_id, user_username):
     return Response('User successfully unregistered for the event')
 
 @api_view(['DELETE'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def deleteEvent(request, id):
     event = Event.objects.get(id=id)
 
-    # removes the event from the creation_user's created_events field
+    # Removes the event from the creation_user's created_events field
     user = event.creation_user
     user.created_events.remove(event)
     event.delete()
     return Response('Event successfully deleted')
 
 @api_view(['GET'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def followerNotification(request, user_id):
     user = User.objects.get(id=user_id)
     follower_notifications = Notification.objects.filter(recipient=user, notification_type='follower').order_by('timestamp')[:10]
@@ -423,6 +427,8 @@ def followerNotification(request, user_id):
     return Response([], status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['GET'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def eventRegNotification(request, user_id):
     user = User.objects.get(id=user_id)
     event_notifications = Notification.objects.filter(recipient=user, notification_type='event_registration').order_by('timestamp')[:15]
@@ -433,6 +439,8 @@ def eventRegNotification(request, user_id):
     return Response([], status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['POST'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def setImageURI(request, username):
     user = User.objects.get(username=username)
     uri = request.data.get('uri')
@@ -443,6 +451,8 @@ def setImageURI(request, username):
     return Response("No URI provided", status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def setExpoPushToken(request):
     username = request.data.get('username')
     pushToken = request.data.get('expo_push_token')
@@ -474,12 +484,3 @@ def send_push_notifications(expo_push_token, title, body):
         return Response("Sentt push notification", status=status.HTTP_200_OK)
     else:
         return Response("Failed to send request: ", status=status.HTTP_400_BAD_REQUEST)
-    
-# @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-# def friends_events(request):
-#     user = request.user
-#     following_ids = user.list_of_following.values_list('id', flat=True)
-#     events = Event.objects.filter(creation_user__id__in=following_ids)
-#     serializer = EventModelSerializer(events, many=True)
-#     return Response(serializer.data)

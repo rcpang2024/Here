@@ -35,7 +35,6 @@ urlpatterns = [
     path('event_notifications/<str:user_id>/', views.eventRegNotification, name="event-notification"),
     path('set_picture/<str:username>/', views.setImageURI, name="set-profile-picture"),
     path('set_push_token/', views.setExpoPushToken, name="set-expo-token"),
-    path('authenticate/', views.authenticate_user, name='authenticate-user'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh')
 ]
