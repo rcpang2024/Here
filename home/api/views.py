@@ -17,6 +17,13 @@ import json
 
 # USER API ENDPOINTS
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def getNotifs(request):
+    notifications = Notification.objects.all()
+    serializer = NotificationModelSerializer(notifications, many=True)
+    return Response(serializer.data)
+
 # For development purposes, not used in app itself
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -278,13 +285,9 @@ def getEvents(request):
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getEvent(request, id):
-    firebaseUser = request.user  # Now you have the authenticated user
-    if firebaseUser.is_authenticated:
-        event = Event.objects.get(id=id)
-        serializer = EventModelSerializer(event, many=False)
-        return Response(serializer.data)
-    else:
-        return Response("Unauthorized to access events", status=status.HTTP_401_UNAUTHORIZED)
+    event = Event.objects.get(id=id)
+    serializer = EventModelSerializer(event, many=False)
+    return Response(serializer.data)
 
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])
@@ -424,7 +427,7 @@ def followerNotification(request, user_id):
     if follower_notifications.exists():
         serializer = NotificationModelSerializer(follower_notifications, many=True)
         return Response(serializer.data)
-    return Response([], status=status.HTTP_204_NO_CONTENT)
+    return Response('No new notifications', status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])

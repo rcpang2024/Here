@@ -3,6 +3,7 @@ from django.urls import path
 from rest_framework_simplejwt.views import (TokenObtainPairView, TokenRefreshView)
 
 urlpatterns = [
+    path('notifications/', views.getNotifs, name="notifications"),
     path('users/', views.getUsers, name="users"),
     path('users/id/<str:id>/', views.getUserByID, name="user-id"),
     path('users/username/<str:username>/', views.getUserByUsername, name="user-username"),
