@@ -57,6 +57,24 @@ def getUserByEmail(request, email):
     return Response(serializer.data)
 
 @api_view(['GET'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
+def getFollowing(request, username):
+    user = User.objects.get(username=username)
+    following_users = user.list_of_following.all()
+    serializer = UserModelSerializer(following_users, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
+def getFollowers(request, username):
+    user = User.objects.get(username=username)
+    followers = user.list_of_followers.all()
+    serializer = UserModelSerializer(followers, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
 @permission_classes([AllowAny])
 def searchUsers(request):
     query = request.GET.get('query', '')
