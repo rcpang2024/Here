@@ -310,6 +310,15 @@ def getEvent(request, id):
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
+def getEventAttendees(request, id):
+    event = Event.objects.get(id=id)
+    attendees = event.list_of_attendees.all()
+    serializer = UserModelSerializer(attendees, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
 def getEventsOfFollowing(request, username):
     # firebaseUser = request.user  # Now you have the authenticated user
     user = User.objects.get(username=username)

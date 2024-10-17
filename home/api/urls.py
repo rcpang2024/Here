@@ -23,6 +23,7 @@ urlpatterns = [
     path('deleteuser/<str:username>/', views.deleteUser, name="delete-user"),
     path('events/', views.getEvents, name="events"),
     path('events/<str:id>/', views.getEvent, name="event"),
+    path('event_attendees/<str:id>/', views.getEventAttendees, name="event-attendees"),
     path('createevent/', views.createEvent, name="create-event"),
     path('updateevent/<str:id>/', views.updateEvent, name="update-event"),
     path('registeruser/<str:event_id>/<str:user_username>/', views.registerUserForEvent, name="register-event"),
