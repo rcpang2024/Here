@@ -75,6 +75,15 @@ def getFollowers(request, username):
     return Response(serializer.data)
 
 @api_view(['GET'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
+def getFollowRequests(request, username):
+    user = User.objects.get(username=username)
+    followRequests = user.follow_requests.all()
+    serializer = UserModelSerializer(followRequests, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
 @permission_classes([AllowAny])
 def searchUsers(request):
     query = request.GET.get('query', '')

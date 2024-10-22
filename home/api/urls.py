@@ -10,6 +10,7 @@ urlpatterns = [
     path('users/email/<str:email>/', views.getUserByEmail, name="user-email"),
     path('users/following/<str:username>/', views.getFollowing, name="user-following"),
     path('users/followers/<str:username>/', views.getFollowers, name="user-followers"),
+    path('users/follow_requests/<str:username>/', views.getFollowRequests, name="follow-request-list"),
     path('createuser/', views.createUser, name="create-user"),
     path('updateuser/<str:username>/', views.updateUser, name="update-user"),
     path('followuser/<str:your_username>/<str:user_username>/', views.followUser, name="follow-user"),
