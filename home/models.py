@@ -57,6 +57,7 @@ class User(models.Model):
         # if not self.id:
         #     # Set the ID before saving if it's a new instance
         #     self.id = self._meta.model.objects.all().order_by("-id").first().id + 1
+        self.username = self.username.lower()
         super().save(*args, **kwargs)
 
 class Event(models.Model):

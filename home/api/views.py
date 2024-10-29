@@ -1,5 +1,4 @@
 from rest_framework import status
-
 from auth_backend import FirebaseAuthentication
 from ..models import User, Event, Notification
 from .serializers import UserModelSerializer, EventModelSerializer, NotificationModelSerializer
@@ -10,6 +9,7 @@ from django.db.models import Q
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 from django.http import JsonResponse
+from django_ratelimit.decorators import ratelimit
 import firebase_admin
 from firebase_admin import auth
 import requests
@@ -17,6 +17,7 @@ import json
 
 # USER API ENDPOINTS
 
+# For development purposes, not used in app itself
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def getNotifs(request):
@@ -40,6 +41,7 @@ def getUserByID(request, id):
     serializer = UserModelSerializer(user, many=False)
     return Response(serializer.data)
 
+@ratelimit(key='ip', rate='30/m', block=True)
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -48,41 +50,74 @@ def getUserByUsername(request, username):
     serializer = UserModelSerializer(user, many=False)
     return Response(serializer.data)
 
+@ratelimit(key='ip', rate='5/m', block=True)
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getUserByEmail(request, email):
-    user = User.objects.get(email=email)
-    serializer = UserModelSerializer(user, many=False)
-    return Response(serializer.data)
+    try:
+        user = User.objects.get(email=email)
+        serializer = UserModelSerializer(user, many=False)
+        return Response(serializer.data)
+    except:
+        return Response("Too many requests. Try again later.", status=status.HTTP_429_TOO_MANY_REQUESTS)
 
+# Returns the list of users that the user is following
+@ratelimit(key='ip', rate='10/m', block=True)
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getFollowing(request, username):
-    user = User.objects.get(username=username)
-    following_users = user.list_of_following.all()
-    serializer = UserModelSerializer(following_users, many=True)
-    return Response(serializer.data)
+    try:
+        user = User.objects.get(username=username)
+        following_users = user.list_of_following.all()
+        serializer = UserModelSerializer(following_users, many=True)
+        return Response(serializer.data)
+    except:
+        return Response("Too many requests. Try again later.", status=status.HTTP_429_TOO_MANY_REQUESTS)
 
+# Returns the user's followers list
+@ratelimit(key='ip', rate='10/m', block=True)
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getFollowers(request, username):
-    user = User.objects.get(username=username)
-    followers = user.list_of_followers.all()
-    serializer = UserModelSerializer(followers, many=True)
-    return Response(serializer.data)
+    try:
+        user = User.objects.get(username=username)
+        followers = user.list_of_followers.all()
+        serializer = UserModelSerializer(followers, many=True)
+        return Response(serializer.data)
+    except:
+        return Response("Too many requests. Try again later.", status=status.HTTP_429_TOO_MANY_REQUESTS)
 
+# Returns the list of users who have requested to follow the user
+@ratelimit(key='ip', rate='10/m', block=True)
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getFollowRequests(request, username):
-    user = User.objects.get(username=username)
-    followRequests = user.follow_requests.all()
-    serializer = UserModelSerializer(followRequests, many=True)
-    return Response(serializer.data)
+    try:
+        user = User.objects.get(username=username)
+        followRequests = user.follow_requests.all()
+        serializer = UserModelSerializer(followRequests, many=True)
+        return Response(serializer.data)
+    except:
+        return Response("Too many requests. Try again later.", status=status.HTTP_429_TOO_MANY_REQUESTS)
+    
+@ratelimit(key='ip', rate='5/m', block=True)
+@api_view(['GET'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
+def getBlockedList(request, username):
+    try:
+        user = User.objects.get(username=username)
+        list_of_blocked = user.blocked_users.all()
+        serializer = UserModelSerializer(list_of_blocked, many=True)
+        return Response(serializer.data)
+    except:
+        return Response("Too many requests. Try again later.", status=status.HTTP_429_TOO_MANY_REQUESTS)
 
+@ratelimit(key='ip', rate='50/m', block=True)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def searchUsers(request):
@@ -93,29 +128,23 @@ def searchUsers(request):
         return Response(user_serializer.data)
     else:
         return Response([], status=204)
-    
+
+@ratelimit(key='ip', rate='25/m', block=True)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def checkUsername(request):
     username = request.GET.get('username', None)
     if username:
-        is_taken = User.objects.filter(username=username).exists()
-        return Response({"is_taken", is_taken})
+        lowercase = username.lower()
+        is_taken = User.objects.filter(username__iexact=lowercase).exists()
+        if is_taken:
+            return Response({"message": "Username is already taken", "is_taken": True}, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "Username is available", "is_taken": False}, status=status.HTTP_200_OK)
     return Response("Invalid username", status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def searchEvents(request):
-    query = request.GET.get('query', '')
-    if query:
-        events = Event.objects.filter(Q(event_name__icontains=query)
-                                    | Q(event_description__icontains=query) | Q(location_addr__icontains=query))
-        event_serializer = EventModelSerializer(events, many=True)
-        return Response(event_serializer.data)
-    else:
-        return Response([], status=200)
-
 # TODO: Reserach defenses against injection attacks
+@ratelimit(key='ip', rate='5/m', block=True)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def createUser(request):
@@ -125,6 +154,7 @@ def createUser(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@ratelimit(key='ip', rate='5/m', block=True)
 @api_view(['PUT'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -154,150 +184,186 @@ def updateUser(request, username):
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['POST'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
 def followUser(request, your_username, user_username):
-    # Following other user
-    yourself = User.objects.get(username=your_username)
-    # User being followed
-    user = User.objects.get(username=user_username)
+    try:
+        # Following other user
+        yourself = User.objects.get(username=your_username)
+        # User being followed
+        user = User.objects.get(username=user_username)
 
-    if yourself in user.follow_requests.all():
-        user.follow_requests.remove(yourself)
-        yourself.requesting_users.remove(user)
+        if yourself in user.follow_requests.all():
+            user.follow_requests.remove(yourself)
+            yourself.requesting_users.remove(user)
 
-    yourself.list_of_following.add(user)
-    user.list_of_followers.add(yourself)
-    Notification.objects.create(sender=yourself, recipient=user, notification_type='follower')
+        yourself.list_of_following.add(user)
+        user.list_of_followers.add(yourself)
+        Notification.objects.create(sender=yourself, recipient=user, notification_type='follower')
 
-    if user.expo_push_token:
-        send_push_notifications(user.expo_push_token, 'New Follower', f'{yourself.username} followed you.')
+        if user.expo_push_token:
+            send_push_notifications(user.expo_push_token, 'New Follower', f'{yourself.username} followed you.')
 
-    yourself.save()
-    user.save()
-    return Response('Successfully followed user', status=status.HTTP_201_CREATED)
+        yourself.save()
+        user.save()
+        return Response('Successfully followed user', status=status.HTTP_201_CREATED)
+    except:
+        return Response('Too many requests. Try again later.', status=status.HTTP_429_TOO_MANY_REQUESTS)
 
+@ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['POST'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
 def requestToFollowUser(request, your_username, user_username):
-    # Requester
-    yourself = User.objects.get(username=your_username)
-    # Recipient of request
-    user = User.objects.get(username=user_username)
+    try:
+        # Requester
+        yourself = User.objects.get(username=your_username)
+        # Recipient of request
+        user = User.objects.get(username=user_username)
 
-    yourself.requesting_users.add(user)
-    user.follow_requests.add(yourself)
-    Notification.objects.create(sender=yourself, recipient=user, notification_type='request')
-    if user.expo_push_token:
-        send_push_notifications(user.expo_push_token, 
-                                'Follow Request', 
-                                f'{yourself.username} is requesting to follow you.')
-    return Response('Sucessfully requested to follow user', status=status.HTTP_201_CREATED)
+        yourself.requesting_users.add(user)
+        user.follow_requests.add(yourself)
+        Notification.objects.create(sender=yourself, recipient=user, notification_type='request')
+        if user.expo_push_token:
+            send_push_notifications(user.expo_push_token, 
+                                    'Follow Request', 
+                                    f'{yourself.username} is requesting to follow you.')
+        return Response('Sucessfully requested to follow user', status=status.HTTP_201_CREATED)
+    except:
+        return Response('Too many requests. Try again later.', status=status.HTTP_429_TOO_MANY_REQUESTS)
 
-@api_view(['DELETE'])
-@authentication_classes([FirebaseAuthentication])
-@permission_classes([IsAuthenticated])
-def unfollowUser(request, your_username, user_username):
-    yourself = User.objects.get(username=your_username)
-    user = User.objects.get(username=user_username)
-
-    yourself.list_of_following.remove(user)
-    user.list_of_followers.remove(yourself)
-    return Response('Successfully unfollowed user')
-
-@api_view(['POST'])
-@authentication_classes([FirebaseAuthentication])
-@permission_classes([IsAuthenticated])
-def addUserNotification(request, your_username, user_username):
-    yourself = User.objects.get(username=your_username)
-    user = User.objects.get(username=user_username)
-
-    if user not in yourself.subscriptions.all() and user in yourself.list_of_following.all() and yourself not in user.blocked_users.all():
-        yourself.subscriptions.add(user)
-    yourself.save()
-    return Response("Successfully set notifications for user.")
-
-@api_view(['DELETE'])
-@authentication_classes([FirebaseAuthentication])
-@permission_classes([IsAuthenticated])
-def removeUserNotification(request, your_username, user_username):
-    yourself = User.objects.get(username=your_username)
-    user = User.objects.get(username=user_username)
-
-    if user in yourself.subscriptions.all():
-        yourself.subscriptions.remove(user)
-    yourself.save()
-    return Response("Successfully removed user notifications for this user.")
-
-@api_view(['POST'])
-@authentication_classes([FirebaseAuthentication])
-@permission_classes([IsAuthenticated])
-def blockUser(request, your_username, user_username):
-    yourself = User.objects.get(username=your_username)
-    user = User.objects.get(username=user_username)
-
-    if user in yourself.list_of_followers.all():
-        yourself.list_of_followers.remove(user)
-        user.list_of_following.remove(yourself)
-    
-    if user in yourself.follow_requests.all():
-        yourself.follow_requests.remove(user)
-        user.requesting_users.remove(yourself)
-    
-    if user in yourself.subscriptions.all():
-        yourself.subscriptions.remove(user)
-    
-    if yourself in user.list_of_followers.all():
-        user.list_of_followers.remove(yourself)
-        yourself.list_of_following.remove(user)
-
-    if yourself in user.follow_requests.all():
-        user.follow_requests.remove(yourself)
-        yourself.requesting_users.remove(user)
-
-    if yourself in user.subscriptions.all():
-        user.subscriptions.remove(yourself)
-
-    for event in yourself.created_events.all():
-        if user in event.list_of_attendees.all():
-            event.list_of_attendees.remove(user)
-            user.attending_events.remove(event)
-    
-    yourself.blocked_users.add(user)
-    yourself.save()
-    user.save()
-    return Response('Successfully blocked user', status=status.HTTP_201_CREATED)
-
-@api_view(['DELETE'])
-@authentication_classes([FirebaseAuthentication])
-@permission_classes([IsAuthenticated])
-def unblockUser(request, your_username, user_username):
-    yourself = User.objects.get(username=your_username)
-    user = User.objects.get(username=user_username)
-
-    if user in yourself.blocked_users.all():
-        yourself.blocked_users.remove(user)
-    yourself.save()
-    return Response('Successfully unblocked user')
-
+@ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['DELETE'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
 def removeRequestToFollowUser(request, your_username, user_username):
-    yourself = User.objects.get(username=your_username)
-    user = User.objects.get(username=user_username)
+    try:
+        yourself = User.objects.get(username=your_username)
+        user = User.objects.get(username=user_username)
 
-    yourself.requesting_users.remove(user)
-    user.follow_requests.remove(yourself)
-    return Response('Successfully removed request to follow user')
+        yourself.requesting_users.remove(user)
+        user.follow_requests.remove(yourself)
+        return Response('Successfully removed request to follow user')
+    except:
+        return Response('Too many requests. Try again later.', status=status.HTTP_429_TOO_MANY_REQUESTS)
 
+@ratelimit(key='ip', rate='20/m', block=True)
+@api_view(['DELETE'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
+def unfollowUser(request, your_username, user_username):
+    try:
+        yourself = User.objects.get(username=your_username)
+        user = User.objects.get(username=user_username)
+
+        yourself.list_of_following.remove(user)
+        user.list_of_followers.remove(yourself)
+        return Response('Successfully unfollowed user')
+    except:
+        return Response('Too many requests. Try again later.', status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+@ratelimit(key='ip', rate='10/m', block=True)
+@api_view(['POST'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
+def addUserNotification(request, your_username, user_username):
+    try:
+        yourself = User.objects.get(username=your_username)
+        user = User.objects.get(username=user_username)
+
+        if user not in yourself.subscriptions.all() and user in yourself.list_of_following.all() and yourself not in user.blocked_users.all():
+            yourself.subscriptions.add(user)
+        yourself.save()
+        return Response('Successfully set notifications for user.')
+    except:
+        return Response('Too many requests. Try again later.', status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+@ratelimit(key='ip', rate='10/m', block=True)
+@api_view(['DELETE'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
+def removeUserNotification(request, your_username, user_username):
+    try:
+        yourself = User.objects.get(username=your_username)
+        user = User.objects.get(username=user_username)
+
+        if user in yourself.subscriptions.all():
+            yourself.subscriptions.remove(user)
+        yourself.save()
+        return Response('Successfully removed user notifications for this user.')
+    except:
+        return Response('Too many requests. Try again later.', status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+@ratelimit(key='ip', rate='10/m', block=True)
+@api_view(['POST'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
+def blockUser(request, your_username, user_username):
+    try:
+        yourself = User.objects.get(username=your_username)
+        user = User.objects.get(username=user_username)
+
+        if user in yourself.list_of_followers.all():
+            yourself.list_of_followers.remove(user)
+            user.list_of_following.remove(yourself)
+        
+        if user in yourself.follow_requests.all():
+            yourself.follow_requests.remove(user)
+            user.requesting_users.remove(yourself)
+        
+        if user in yourself.subscriptions.all():
+            yourself.subscriptions.remove(user)
+        
+        if yourself in user.list_of_followers.all():
+            user.list_of_followers.remove(yourself)
+            yourself.list_of_following.remove(user)
+
+        if yourself in user.follow_requests.all():
+            user.follow_requests.remove(yourself)
+            yourself.requesting_users.remove(user)
+
+        if yourself in user.subscriptions.all():
+            user.subscriptions.remove(yourself)
+
+        for event in yourself.created_events.all():
+            if user in event.list_of_attendees.all():
+                event.list_of_attendees.remove(user)
+                user.attending_events.remove(event)
+        
+        yourself.blocked_users.add(user)
+        yourself.save()
+        user.save()
+        return Response('Successfully blocked user', status=status.HTTP_201_CREATED)
+    except:
+        return Response('Too many requests. Try again later.', status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+@ratelimit(key='ip', rate='10/m', block=True)
+@api_view(['DELETE'])
+@authentication_classes([FirebaseAuthentication])
+@permission_classes([IsAuthenticated])
+def unblockUser(request, your_username, user_username):
+    try:
+        yourself = User.objects.get(username=your_username)
+        user = User.objects.get(username=user_username)
+
+        if user in yourself.blocked_users.all():
+            yourself.blocked_users.remove(user)
+        yourself.save()
+        return Response('Successfully unblocked user')
+    except:
+        return Response('Too many requests. Try again later.', status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+@ratelimit(key='ip', rate='3/m', block=True)
 @api_view(['DELETE'])
 def deleteUser(request, username):
-    user = User.objects.get(username=username)
-    user.delete()
-    return Response('User successfully deleted')
+    try:
+        user = User.objects.get(username=username)
+        user.delete()
+        return Response('User successfully deleted')
+    except:
+        return Response('Too many requests. Try again later.', status=status.HTTP_429_TOO_MANY_REQUESTS)
 
 # EVENT API ENDPOINTS
 # For development, not used in app
@@ -308,6 +374,7 @@ def getEvents(request):
     serializer = EventModelSerializer(events, many=True)
     return Response(serializer.data)
 
+@ratelimit(key='ip', rate='50/m', block=True)
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -316,6 +383,20 @@ def getEvent(request, id):
     serializer = EventModelSerializer(event, many=False)
     return Response(serializer.data)
 
+@ratelimit(key='ip', rate='30/m', block=True)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def searchEvents(request):
+    query = request.GET.get('query', '')
+    if query:
+        events = Event.objects.filter(Q(event_name__icontains=query)
+                                    | Q(event_description__icontains=query) | Q(location_addr__icontains=query))
+        event_serializer = EventModelSerializer(events, many=True)
+        return Response(event_serializer.data)
+    else:
+        return Response([], status=200)
+
+@ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -325,6 +406,7 @@ def getEventAttendees(request, id):
     serializer = UserModelSerializer(attendees, many=True)
     return Response(serializer.data)
 
+@ratelimit(key='ip', rate='50/m', block=True)
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -336,6 +418,7 @@ def getEventsOfFollowing(request, username):
     serializer = EventModelSerializer(events, many=True)
     return Response(serializer.data)
 
+@ratelimit(key='ip', rate='50/m', block=True)
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -358,6 +441,7 @@ def getNearbyEvents(request, latitude, longitude):
     serializer = EventModelSerializer(events, many=True)
     return Response(serializer.data)
 
+@ratelimit(key='ip', rate='10/m', block=True)
 @api_view(['POST'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -394,6 +478,7 @@ def createEvent(request):
         return Response(event_serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@ratelimit(key='ip', rate='5/m', block=True)
 @api_view(['PUT'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -414,6 +499,7 @@ def updateEvent(request, id):
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['POST'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -430,6 +516,7 @@ def registerUserForEvent(request, event_id, user_username):
                                 f'{user.username} is going your event: {event.event_name}')
     return Response('User successfully registered for the event', status=status.HTTP_201_CREATED)
 
+@ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['DELETE'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -441,6 +528,7 @@ def unregisterUserForEvent(request, event_id, user_username):
     user.attending_events.remove(event)
     return Response('User successfully unregistered for the event')
 
+@ratelimit(key='ip', rate='10/m', block=True)
 @api_view(['DELETE'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -453,6 +541,7 @@ def deleteEvent(request, id):
     event.delete()
     return Response('Event successfully deleted')
 
+@ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -465,6 +554,7 @@ def followerNotification(request, user_id):
         return Response(serializer.data)
     return Response('No new notifications', status=status.HTTP_204_NO_CONTENT)
 
+@ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['GET'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -477,6 +567,7 @@ def eventRegNotification(request, user_id):
         return Response(serializer.data)
     return Response([], status=status.HTTP_204_NO_CONTENT)
 
+@ratelimit(key='ip', rate='5/m', block=True)
 @api_view(['POST'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -489,6 +580,7 @@ def setImageURI(request, username):
         return Response("Profile picture URI set.", status=status.HTTP_200_OK)
     return Response("No URI provided", status=status.HTTP_400_BAD_REQUEST)
 
+@ratelimit(key='ip', rate='50/m', block=True)
 @api_view(['POST'])
 @authentication_classes([FirebaseAuthentication])
 @permission_classes([IsAuthenticated])
@@ -520,6 +612,6 @@ def send_push_notifications(expo_push_token, title, body):
     response = requests.post(url, headers=headers, data=json.dumps(payload))
 
     if response.status_code == 200:
-        return Response("Sentt push notification", status=status.HTTP_200_OK)
+        return Response("Sent push notification", status=status.HTTP_200_OK)
     else:
         return Response("Failed to send request: ", status=status.HTTP_400_BAD_REQUEST)
