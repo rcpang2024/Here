@@ -152,12 +152,13 @@ DATABASES = {
     # }
     'default': {
         # 'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        # 'ENGINE': 'django.db.backends.postgresql',
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'HereDB',
-        'USER': 'postgres',
-        'PASSWORD': 'Raptor@gmail1',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': 'postgres',
+        'USER': 'postgres.osljhnhjrovmihpazaqp',
+        'PASSWORD': os.getenv('SUPABASE_DB_PW'),
+        'HOST': 'aws-0-us-east-1.pooler.supabase.com',
+        'PORT': '6543',
     }
 }
 
