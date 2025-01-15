@@ -1,5 +1,5 @@
 from rest_framework import status
-from auth_backend import FirebaseAuthentication
+from auth_backend import FirebaseAuthentication, SupabaseAuthentication
 from ..models import User, Event, Notification
 from .serializers import UserModelSerializer, EventModelSerializer, NotificationModelSerializer
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
@@ -29,12 +29,13 @@ def getNotifs(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def getUsers(request):
-    users = User.objects.all()
+    max_id = 3000
+    users = User.objects.filter(id__lt=max_id)
     serializer = UserModelSerializer(users, many=True)
     return Response(serializer.data)
 
 @api_view(['GET'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getUserByID(request, id):
     user = User.objects.get(id=id)
@@ -43,7 +44,7 @@ def getUserByID(request, id):
 
 @ratelimit(key='ip', rate='30/m', block=True)
 @api_view(['GET'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getUserByUsername(request, username):
     user = User.objects.get(username=username)
@@ -52,7 +53,7 @@ def getUserByUsername(request, username):
 
 @ratelimit(key='ip', rate='5/m', block=True)
 @api_view(['GET'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getUserByEmail(request, email):
     try:
@@ -65,7 +66,7 @@ def getUserByEmail(request, email):
 # Returns the list of users that the user is following
 @ratelimit(key='ip', rate='10/m', block=True)
 @api_view(['GET'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getFollowing(request, username):
     try:
@@ -79,7 +80,7 @@ def getFollowing(request, username):
 # Returns the user's followers list
 @ratelimit(key='ip', rate='10/m', block=True)
 @api_view(['GET'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getFollowers(request, username):
     try:
@@ -93,7 +94,7 @@ def getFollowers(request, username):
 # Returns the list of users who have requested to follow the user
 @ratelimit(key='ip', rate='10/m', block=True)
 @api_view(['GET'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getFollowRequests(request, username):
     try:
@@ -106,7 +107,7 @@ def getFollowRequests(request, username):
     
 @ratelimit(key='ip', rate='5/m', block=True)
 @api_view(['GET'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getBlockedList(request, username):
     try:
@@ -156,7 +157,7 @@ def createUser(request):
 
 @ratelimit(key='ip', rate='5/m', block=True)
 @api_view(['PUT'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def updateUser(request, username):
     data = request.data
@@ -186,7 +187,7 @@ def updateUser(request, username):
 
 @ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['POST'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def followUser(request, your_username, user_username):
     try:
@@ -214,7 +215,7 @@ def followUser(request, your_username, user_username):
 
 @ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['POST'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def requestToFollowUser(request, your_username, user_username):
     try:
@@ -236,7 +237,7 @@ def requestToFollowUser(request, your_username, user_username):
 
 @ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['DELETE'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def removeRequestToFollowUser(request, your_username, user_username):
     try:
@@ -251,7 +252,7 @@ def removeRequestToFollowUser(request, your_username, user_username):
 
 @ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['DELETE'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def unfollowUser(request, your_username, user_username):
     try:
@@ -266,7 +267,7 @@ def unfollowUser(request, your_username, user_username):
 
 @ratelimit(key='ip', rate='10/m', block=True)
 @api_view(['POST'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def addUserNotification(request, your_username, user_username):
     try:
@@ -282,7 +283,7 @@ def addUserNotification(request, your_username, user_username):
 
 @ratelimit(key='ip', rate='10/m', block=True)
 @api_view(['DELETE'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def removeUserNotification(request, your_username, user_username):
     try:
@@ -298,7 +299,7 @@ def removeUserNotification(request, your_username, user_username):
 
 @ratelimit(key='ip', rate='10/m', block=True)
 @api_view(['POST'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def blockUser(request, your_username, user_username):
     try:
@@ -341,7 +342,7 @@ def blockUser(request, your_username, user_username):
 
 @ratelimit(key='ip', rate='10/m', block=True)
 @api_view(['DELETE'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def unblockUser(request, your_username, user_username):
     try:
@@ -357,6 +358,8 @@ def unblockUser(request, your_username, user_username):
 
 @ratelimit(key='ip', rate='3/m', block=True)
 @api_view(['DELETE'])
+# @authentication_classes([SupabaseAuthentication])
+# @permission_classes([IsAuthenticated])
 def deleteUser(request, username):
     try:
         user = User.objects.get(username=username)
@@ -376,7 +379,7 @@ def getEvents(request):
 
 @ratelimit(key='ip', rate='50/m', block=True)
 @api_view(['GET'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getEvent(request, id):
     event = Event.objects.get(id=id)
@@ -398,7 +401,7 @@ def searchEvents(request):
 
 @ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['GET'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getEventAttendees(request, id):
     event = Event.objects.get(id=id)
@@ -408,7 +411,7 @@ def getEventAttendees(request, id):
 
 @ratelimit(key='ip', rate='50/m', block=True)
 @api_view(['GET'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getEventsOfFollowing(request, username):
     # firebaseUser = request.user  # Now you have the authenticated user
@@ -416,11 +419,16 @@ def getEventsOfFollowing(request, username):
     followedUsers = user.list_of_following.all()
     events = Event.objects.filter(creation_user__in=followedUsers)
     serializer = EventModelSerializer(events, many=True)
-    return Response(serializer.data)
+    # Always return a consistent JSON structure
+    return Response(serializer.data if events.exists() else [])
+    # if len(events) == 0:
+    #     return Response("There are no events present.")
+    # else:
+    #     return Response(serializer.data)
 
 @ratelimit(key='ip', rate='50/m', block=True)
 @api_view(['GET'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getFriendsAttendingEvent(request, username):
     user = User.objects.get(username=username)
@@ -430,7 +438,7 @@ def getFriendsAttendingEvent(request, username):
     return Response(serializer.data)
 
 @api_view(['GET'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getNearbyEvents(request, latitude, longitude):
     lat = float(latitude)
@@ -441,9 +449,9 @@ def getNearbyEvents(request, latitude, longitude):
     serializer = EventModelSerializer(events, many=True)
     return Response(serializer.data)
 
-@ratelimit(key='ip', rate='10/m', block=True)
+@ratelimit(key='ip', rate='5/m', block=True)
 @api_view(['POST'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def createEvent(request):
     data = request.data
@@ -480,7 +488,7 @@ def createEvent(request):
 
 @ratelimit(key='ip', rate='5/m', block=True)
 @api_view(['PUT'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def updateEvent(request, id):
     data = request.data
@@ -501,7 +509,7 @@ def updateEvent(request, id):
 
 @ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['POST'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def registerUserForEvent(request, event_id, user_username):
     event = Event.objects.get(id=event_id)
@@ -518,7 +526,7 @@ def registerUserForEvent(request, event_id, user_username):
 
 @ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['DELETE'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def unregisterUserForEvent(request, event_id, user_username):
     event = Event.objects.get(id=event_id)
@@ -530,7 +538,7 @@ def unregisterUserForEvent(request, event_id, user_username):
 
 @ratelimit(key='ip', rate='10/m', block=True)
 @api_view(['DELETE'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def deleteEvent(request, id):
     event = Event.objects.get(id=id)
@@ -543,7 +551,7 @@ def deleteEvent(request, id):
 
 @ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['GET'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def followerNotification(request, user_id):
     user = User.objects.get(id=user_id)
@@ -556,7 +564,7 @@ def followerNotification(request, user_id):
 
 @ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['GET'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def eventRegNotification(request, user_id):
     user = User.objects.get(id=user_id)
@@ -569,7 +577,7 @@ def eventRegNotification(request, user_id):
 
 @ratelimit(key='ip', rate='5/m', block=True)
 @api_view(['POST'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def setImageURI(request, username):
     user = User.objects.get(username=username)
@@ -582,7 +590,7 @@ def setImageURI(request, username):
 
 @ratelimit(key='ip', rate='50/m', block=True)
 @api_view(['POST'])
-@authentication_classes([FirebaseAuthentication])
+@authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def setExpoPushToken(request):
     username = request.data.get('username')

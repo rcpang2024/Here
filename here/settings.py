@@ -13,10 +13,12 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from datetime import timedelta
 from pathlib import Path
 import os
+from supabase import Client, create_client
 import firebase_admin
 from firebase_admin import credentials
 import environ
 import json
+# from auth_backend import SupabaseAuthentication
 
 if os.name == 'nt':
     import platform
@@ -35,6 +37,12 @@ environ.Env.read_env()
 firebase_service_key = env("FIREBASE_SERVICE_KEY")
 cred = credentials.Certificate(json.loads(firebase_service_key))
 firebase_admin.initialize_app(cred)
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("Supabase credentials are not set in the environment variables.")
+SUPABASE_CLIENT = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_HEADERS = [
@@ -68,13 +76,16 @@ INSTALLED_APPS = [
     'home',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
-    'django.contrib.gis.db.backends.postgis'
+    'django.contrib.gis.db.backends.postgis',
+    'supabase'
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         # 'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'auth_backend.FirebaseAuthentication',
+        # 'auth_backend.FirebaseAuthentication',
+        'auth_backend.SupabaseAuthentication'
+        # SupabaseAuthentication
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -147,8 +158,14 @@ WSGI_APPLICATION = 'here.wsgi.application'
 
 DATABASES = {
     # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': BASE_DIR / 'db.sqlite3',
+    #     # 'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    #     # 'ENGINE': 'django.db.backends.postgresql',
+    #     'ENGINE': 'django.contrib.gis.db.backends.postgis',
+    #     'NAME': 'HereDB',
+    #     'USER': 'postgres',
+    #     'PASSWORD': 'Raptor@gmail1',
+    #     'HOST': 'localhost',
+    #     'PORT': '5432',
     # }
     'default': {
         # 'ENGINE': 'django.db.backends.postgresql_psycopg2',
