@@ -560,7 +560,7 @@ def followerNotification(request, user_id):
     if follower_notifications.exists():
         serializer = NotificationModelSerializer(follower_notifications, many=True)
         return Response(serializer.data)
-    return Response('No new notifications', status=status.HTTP_204_NO_CONTENT)
+    return Response([], status=status.HTTP_200_OK)
 
 @ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['GET'])
@@ -573,7 +573,7 @@ def eventRegNotification(request, user_id):
     if event_notifications.exists():
         serializer = NotificationModelSerializer(event_notifications, many=True)
         return Response(serializer.data)
-    return Response([], status=status.HTTP_204_NO_CONTENT)
+    return Response([], status=status.HTTP_200_OK)
 
 @ratelimit(key='ip', rate='5/m', block=True)
 @api_view(['POST'])
