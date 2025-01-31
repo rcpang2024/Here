@@ -1,7 +1,7 @@
 from rest_framework import status
 from auth_backend import FirebaseAuthentication, SupabaseAuthentication
-from ..models import User, Event, Notification
-from .serializers import UserModelSerializer, EventModelSerializer, NotificationModelSerializer
+from ..models import User, Event, Notification, Comment
+from .serializers import UserModelSerializer, EventModelSerializer, NotificationModelSerializer, CommentModelSerializer
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -548,6 +548,38 @@ def deleteEvent(request, id):
     user.created_events.remove(event)
     event.delete()
     return Response('Event successfully deleted')
+
+@ratelimit(key='ip', rate='5/m', block=True)
+@api_view(['GET'])
+@authentication_classes([SupabaseAuthentication])
+@permission_classes([IsAuthenticated])
+def getComments(request, event_id):
+    try:
+        event = Event.objects.get(id=event_id)
+        comments = Comment.objects.filter(event=event, parent=None).order_by('-timestamp')
+        serializer = CommentModelSerializer(comments, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except:
+        return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+
+@ratelimit(key='ip', rate='5/m', block=True)
+@api_view(['POST'])
+@authentication_classes([SupabaseAuthentication])
+@permission_classes([IsAuthenticated])
+def addComment(request, event_id):
+    try:
+        event = Event.objects.get(id=event_id)
+        parent_id = request.data.get('parent', None)
+        serializer = CommentModelSerializer(data=request.data)
+        if serializer.is_valid():
+            parent_comment = Comment.objects.get(id=parent_id) if parent_id else None
+            serializer.save(author=request.user, event=event, parent=parent_comment)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Event.DoesNotExist:
+        return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Comment.DoesNotExist:
+        return Response({'error': 'Parent comment not found'}, status=status.HTTP_404_NOT_FOUND)
 
 @ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['GET'])

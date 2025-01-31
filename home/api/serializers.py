@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import User, Event, Notification
+from ..models import User, Event, Notification, Comment
 
 class UserModelSerializer(serializers.ModelSerializer):
     class Meta:
@@ -25,3 +25,16 @@ class NotificationModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = ['id', 'notification_type', 'recipient', 'sender', 'sender_username', 'sender_photo', 'timestamp', 'event', 'event_name']
+
+class CommentModelSerializer(serializers.ModelSerializer):
+    author_username = serializers.CharField(source='author.username', read_only=True)
+    author_profilepic = serializers.CharField(source='author.profile_pic', read_only=True)
+    replies = serializers.SerializerMethodField()
+    class Meta:
+        model = Comment
+        fields = ['id', 'author', 'author_username', 'author_profilepic', 'event', 'message', 'timestamp', 'parent', 'replies']
+
+    def get_replies(self, obj):
+        """Retrieve replies to a comment"""
+        replies = obj.replies.all().order_by('timestamp')
+        return CommentModelSerializer(replies, many=True).data

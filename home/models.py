@@ -107,3 +107,13 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.sender.username} -> {self.recipient.username}: {self.notification_type}"
+    
+class Comment(models.Model):
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comment_author')
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='comment_event')
+    message = models.TextField(blank=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
+
+    def __str__(self):
+        return f"{self.author.username} on {self.event.event_name}: {self.message[:20]}"
