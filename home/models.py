@@ -114,6 +114,7 @@ class Comment(models.Model):
     message = models.TextField(blank=False)
     timestamp = models.DateTimeField(auto_now_add=True)
     parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
+    mentioned_user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='mentioned_in_comments')
 
     def __str__(self):
         return f"{self.author.username} on {self.event.event_name}: {self.message[:20]}"

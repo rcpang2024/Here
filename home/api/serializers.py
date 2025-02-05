@@ -30,9 +30,10 @@ class CommentModelSerializer(serializers.ModelSerializer):
     author_username = serializers.CharField(source='author.username', read_only=True)
     author_profilepic = serializers.CharField(source='author.profile_pic', read_only=True)
     replies = serializers.SerializerMethodField()
+    mentioned_username = serializers.CharField(source='mentioned_user.username', read_only=True)
     class Meta:
         model = Comment
-        fields = ['id', 'author', 'author_username', 'author_profilepic', 'event', 'message', 'timestamp', 'parent', 'replies']
+        fields = ['id', 'author', 'author_username', 'author_profilepic', 'event', 'message', 'timestamp', 'parent', 'replies', 'mentioned_user', 'mentioned_username']
 
     def get_replies(self, obj):
         """Retrieve replies to a comment"""

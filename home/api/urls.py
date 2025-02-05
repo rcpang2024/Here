@@ -39,6 +39,7 @@ urlpatterns = [
     path('nearby_events/<str:latitude>/<str:longitude>/', views.getNearbyEvents, name="nearby-events"),
     path('comments/<str:event_id>/', views.getComments, name='event-comments'),
     path('addcomment/<str:event_id>/', views.addComment, name='add-comments'),
+    path('deletecomment/<str:comment_id>/', views.deleteComment, name='delete-comments'),
     path('follower_notifications/<str:user_id>/', views.followerNotification, name="follower-notification"),
     path('event_notifications/<str:user_id>/', views.eventRegNotification, name="event-notification"),
     path('set_picture/<str:username>/', views.setImageURI, name="set-profile-picture"),

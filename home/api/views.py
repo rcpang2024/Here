@@ -570,16 +570,42 @@ def addComment(request, event_id):
     try:
         event = Event.objects.get(id=event_id)
         parent_id = request.data.get('parent', None)
+        mentioned_username = request.data.get('mentioned_user', None)
+
+        mentioned_user = None
+        if mentioned_username:
+            mentioned_user = User.objects.filter(username=mentioned_username).first()
+
         serializer = CommentModelSerializer(data=request.data)
         if serializer.is_valid():
-            parent_comment = Comment.objects.get(id=parent_id) if parent_id else None
-            serializer.save(author=request.user, event=event, parent=parent_comment)
+            parent_comment = None
+            if parent_id:
+                try:
+                    parent_comment = Comment.objects.get(id=parent_id)
+                except Comment.DoesNotExist:
+                    return Response({"Error: Parent does not exist: "}, status=status.HTTP_404_NOT_FOUND)
+            serializer.save(author=request.user, event=event, parent=parent_comment, mentioned_user=mentioned_user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Event.DoesNotExist:
-        return Response({'error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'Error': 'Event not found'}, status=status.HTTP_404_NOT_FOUND)
     except Comment.DoesNotExist:
-        return Response({'error': 'Parent comment not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'Error': 'Parent comment not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+@ratelimit(key='ip', rate='5/m', block=True)
+@api_view(['DELETE'])
+@authentication_classes([SupabaseAuthentication])
+@permission_classes([IsAuthenticated])
+def deleteComment(request, comment_id):
+    try:
+        comment = Comment.objects.get(id=comment_id)
+        
+        if comment.author != request.user:
+            return Response({"Error: you are not authorized to delete this comment."}, status=status.HTTP_403_FORBIDDEN)
+        comment.delete()
+        return Response({"Comment successfully deleted."}, status=status.HTTP_200_OK)
+    except Comment.DoesNotExist:
+        return Response({"Comment not found."}, status=status.HTTP_404_NOT_FOUND)
 
 @ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['GET'])
