@@ -570,11 +570,13 @@ def addComment(request, event_id):
     try:
         event = Event.objects.get(id=event_id)
         parent_id = request.data.get('parent', None)
+        # mentioned_username actually retrieves mentioned_user which is the id
         mentioned_username = request.data.get('mentioned_user', None)
-
+        print("mentioned_username", mentioned_username)
         mentioned_user = None
         if mentioned_username:
-            mentioned_user = User.objects.filter(username=mentioned_username).first()
+            mentioned_user = User.objects.filter(id=mentioned_username).first()
+            print(mentioned_user)
 
         serializer = CommentModelSerializer(data=request.data)
         if serializer.is_valid():
