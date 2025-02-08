@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from ..models import User, Event, Notification, Comment
+from datetime import datetime
 
 class UserModelSerializer(serializers.ModelSerializer):
     class Meta:
@@ -31,11 +32,15 @@ class CommentModelSerializer(serializers.ModelSerializer):
     author_profilepic = serializers.CharField(source='author.profile_pic', read_only=True)
     replies = serializers.SerializerMethodField()
     mentioned_username = serializers.CharField(source='mentioned_user.username', read_only=True)
+    formatted_timestamp = serializers.SerializerMethodField()
     class Meta:
         model = Comment
-        fields = ['id', 'author', 'author_username', 'author_profilepic', 'event', 'message', 'timestamp', 'parent', 'replies', 'mentioned_user', 'mentioned_username']
+        fields = ['id', 'author', 'author_username', 'author_profilepic', 'event', 'message', 'timestamp', 'parent', 'replies', 'mentioned_user', 'mentioned_username', 'formatted_timestamp']
 
     def get_replies(self, obj):
         """Retrieve replies to a comment"""
         replies = obj.replies.all().order_by('timestamp')
         return CommentModelSerializer(replies, many=True).data
+    
+    def get_formatted_timestamp(self, obj):
+        return obj.timestamp.strftime('%m-%d-%Y')
