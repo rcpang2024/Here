@@ -9,6 +9,7 @@ from django.contrib.auth.models import AbstractUser
 # 7/24 - new fields: password, bio, user_privacy, and changes to existing fields
 # 8/2/24 - new fields: follow_requests - others users requesting user; requesting_users - user requesting others
 class User(models.Model):
+    """Object for the user"""
     USER_TYPE = {
         ('individual', 'individual'),
         ('organization', 'organization')
@@ -61,6 +62,7 @@ class User(models.Model):
         super().save(*args, **kwargs)
 
 class Event(models.Model):
+    """Object for an event"""
     creation_user = models.ForeignKey(User, related_name='events', on_delete=models.CASCADE)
     event_name = models.CharField(max_length=200, default='', blank=False)
     event_description = models.TextField(blank=True)
@@ -90,6 +92,7 @@ class Event(models.Model):
         self.full_clean()
 
 class Notification(models.Model):
+    """Object for a notification"""
     NOTIFICATION_TYPES = {
         ('follower', 'Follower'),
         ('request', 'Follow Request'),
@@ -109,6 +112,7 @@ class Notification(models.Model):
         return f"{self.sender.username} -> {self.recipient.username}: {self.notification_type}"
     
 class Comment(models.Model):
+    """Object for a comment on an event object"""
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comment_author')
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='comment_event')
     message = models.TextField(blank=False)
@@ -118,3 +122,26 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"{self.author.username} on {self.event.event_name}: {self.message[:20]}"
+
+class Conversation(models.Model):
+    """Object for a conversation between users"""
+    participants = models.ManyToManyField(User, related_name='conversations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_message_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        names = ", ".join(self.participants.values_list("username", flat=True))
+        return f"Conversation between {names}"
+    
+class Message(models.Model):
+    """Object for a message in the conversation (chat rooms)"""
+    conversation = models.ForeignKey(Conversation, related_name='messages', on_delete=models.CASCADE)
+    sender = models.ForeignKey(User, related_name='message_sender', on_delete=models.CASCADE)
+    text = models.TextField(blank=True, null=True)
+    media = models.FileField(upload_to='messages/', blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+    reply_to = models.ForeignKey('self', blank=True, null=True, related_name='replies', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"Message from {self.sender} at {self.timestamp.strftime('%d-%m-%Y')}"

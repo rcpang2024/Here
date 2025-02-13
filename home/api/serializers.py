@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import User, Event, Notification, Comment
+from ..models import User, Event, Notification, Comment, Conversation, Message
 from datetime import datetime
 
 class UserModelSerializer(serializers.ModelSerializer):
@@ -43,4 +43,37 @@ class CommentModelSerializer(serializers.ModelSerializer):
         return CommentModelSerializer(replies, many=True).data
     
     def get_formatted_timestamp(self, obj):
-        return obj.timestamp.strftime('%m-%d-%Y')
+        return obj.timestamp.strftime('%m-%d-%Y %I:%M %p')
+    
+class ConversationModelSerializer(serializers.ModelSerializer):
+    participants = serializers.SerializerMethodField()
+    class Meta:
+        model = Conversation
+        fields = ['id', 'participants', 'created_at', 'last_message_at']
+    
+    def get_participants(self, obj):
+        return [user.username for user in obj.participants.all()]
+
+class MessageModelSerializer(serializers.ModelSerializer):
+    sender_username = serializers.CharField(source='sender.username', read_only=True)
+    sender_photo = serializers.CharField(source='sender.profile_pic', read_only=True)
+    formatted_timestamp = serializers.SerializerMethodField()
+    reply_to_message = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Message
+        fields = ['conversation', 'sender', 'sender_username', 'sender_photo', 'text', 'media', 
+                  'timestamp', 'formatted_timestamp', 'is_read', 'reply_to', 'reply_to_message'
+        ]
+
+    def get_formatted_timestamp(self, obj):
+        return obj.timestamp.strftime('%m-%d-%Y %I:%M %p')
+    
+    def get_reply_to_message(self, obj):
+        if obj.reply_to:
+            return {
+                'id': obj.reply_to.id,
+                'sender': obj.reply_to.sender_username,
+                'text': obj.reply_to.text[:30] + '...' if len(obj.reply_to.text > 30) else obj.reply_to.text,
+                'timestamp': obj.reply_to.timestamp.strftime('%m-%d-%Y %I:%M %p')
+            }

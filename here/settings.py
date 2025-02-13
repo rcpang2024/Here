@@ -13,12 +13,10 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from datetime import timedelta
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 from supabase import Client, create_client
-import firebase_admin
-from firebase_admin import credentials
 import environ
 import json
-# from auth_backend import SupabaseAuthentication
 
 if os.name == 'nt':
     import platform
@@ -32,11 +30,12 @@ if os.name == 'nt':
     os.environ['PATH'] = OSGEO4W + r"\bin;" + os.environ['PATH']
 
 # TODO: SECURELY store the service account key and then do a custom middleware to verify it
-env = environ.Env()
-environ.Env.read_env()
-firebase_service_key = env("FIREBASE_SERVICE_KEY")
-cred = credentials.Certificate(json.loads(firebase_service_key))
-firebase_admin.initialize_app(cred)
+# load_dotenv()
+# env = environ.Env()
+# environ.Env.read_env()
+# firebase_service_key = env("FIREBASE_SERVICE_KEY")
+# cred = credentials.Certificate(json.loads(firebase_service_key))
+# firebase_admin.initialize_app(cred)
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
@@ -77,8 +76,18 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'django.contrib.gis.db.backends.postgis',
-    'supabase'
+    'supabase',
+    'channels'
 ]
+
+# WebSocket configuration
+ASGI_APPLICATION = "here.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer" # CHANGE TO REDIS FOR PRODUCTION
+    }
+}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

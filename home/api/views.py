@@ -1,5 +1,5 @@
 from rest_framework import status
-from auth_backend import FirebaseAuthentication, SupabaseAuthentication
+from auth_backend import SupabaseAuthentication
 from ..models import User, Event, Notification, Comment
 from .serializers import UserModelSerializer, EventModelSerializer, NotificationModelSerializer, CommentModelSerializer
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
@@ -10,8 +10,6 @@ from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 from django.http import JsonResponse
 from django_ratelimit.decorators import ratelimit
-import firebase_admin
-from firebase_admin import auth
 import requests
 import json
 
@@ -414,7 +412,6 @@ def getEventAttendees(request, id):
 @authentication_classes([SupabaseAuthentication])
 @permission_classes([IsAuthenticated])
 def getEventsOfFollowing(request, username):
-    # firebaseUser = request.user  # Now you have the authenticated user
     user = User.objects.get(username=username)
     followedUsers = user.list_of_following.all()
     events = Event.objects.filter(creation_user__in=followedUsers)
