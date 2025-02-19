@@ -1,6 +1,7 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
-from ..home.models import Conversation, Message
+from channels.layers import get_channel_layer
+from home.models import Conversation, Message
 from django.contrib.auth import get_user_model
 from asgiref.sync import sync_to_async
 
@@ -11,6 +12,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
         self.room_group_name = f"chat_{self.conversation_id}"
 
+        # Ensure channel_layer is set
+        if not self.channel_layer:
+            self.channel_layer = get_channel_layer()
+
+        if self.channel_layer is None:
+            print("Error: Channel Layer is not configured correctly.")
+            await self.close()
+            return
+
+        # Add channel to group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
         

@@ -30,16 +30,18 @@ if os.name == 'nt':
     os.environ['PATH'] = OSGEO4W + r"\bin;" + os.environ['PATH']
 
 # TODO: SECURELY store the service account key and then do a custom middleware to verify it
-# load_dotenv()
+load_dotenv()
 # env = environ.Env()
 # environ.Env.read_env()
 # firebase_service_key = env("FIREBASE_SERVICE_KEY")
 # cred = credentials.Certificate(json.loads(firebase_service_key))
 # firebase_admin.initialize_app(cred)
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "just a test")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 if not SUPABASE_URL or not SUPABASE_KEY:
+    print("Supabase URL: ", SUPABASE_URL)
+    print("Supabase Key: ", SUPABASE_KEY)
     raise ValueError("Supabase credentials are not set in the environment variables.")
 SUPABASE_CLIENT = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -66,18 +68,20 @@ ALLOWED_HOSTS = ["*"]
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'daphne',
     'django.contrib.staticfiles',
     'home',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'django.contrib.gis.db.backends.postgis',
     'supabase',
-    'channels'
+    'here',
 ]
 
 # WebSocket configuration
