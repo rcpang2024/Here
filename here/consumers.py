@@ -1,11 +1,9 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.layers import get_channel_layer
-from home.models import Conversation, Message
+from home.models import Conversation, Message, User
 from django.contrib.auth import get_user_model
 from asgiref.sync import sync_to_async
-
-User = get_user_model()
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -31,9 +29,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         data = json.loads(text_data)
         message = data['message']
-        sender_id = data['sender']
+        sender_username = data['sender']
 
-        sender = await sync_to_async(User.objects.get)(id=sender_id)
+        try:
+            sender = await sync_to_async(User.objects.get)(username=sender_username)
+        except User.DoesNotExist:
+            print(f"Error: User '{sender_username}' does not exist.")  # Debugging log
+            await self.send(text_data=json.dumps({
+                "error": "User does not exist."
+            }))
+            return  # Prevents crashing
+
         conversation = await sync_to_async(Conversation.objects.get)(id=self.conversation_id)
         message_obj = await sync_to_async(Message.objects.create)(conversation=conversation, sender=sender, text=message)
 

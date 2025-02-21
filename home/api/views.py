@@ -1,7 +1,7 @@
 from rest_framework import status
 from auth_backend import SupabaseAuthentication
-from ..models import User, Event, Notification, Comment
-from .serializers import UserModelSerializer, EventModelSerializer, NotificationModelSerializer, CommentModelSerializer
+from ..models import User, Event, Notification, Comment, Conversation, Message
+from .serializers import UserModelSerializer, EventModelSerializer, NotificationModelSerializer, CommentModelSerializer, ConversationModelSerializer, MessageModelSerializer
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -644,6 +644,90 @@ def setImageURI(request, username):
         user.save()
         return Response("Profile picture URI set.", status=status.HTTP_200_OK)
     return Response("No URI provided", status=status.HTTP_400_BAD_REQUEST)
+
+@ratelimit(key='ip', rate='5/m', block=True)
+@api_view(['GET'])
+@authentication_classes([SupabaseAuthentication])
+@permission_classes([IsAuthenticated])
+def getConversations(request, user_id):
+    user = User.objects.get(id=user_id)
+
+    # switch to order_by(last_message_at) later
+    conversations = Conversation.objects.filter(participants=user).order_by('-created_at')
+    serializer = ConversationModelSerializer(conversations, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@ratelimit(key='ip', rate='5/m', block=True)
+@api_view(['POST'])
+@authentication_classes([SupabaseAuthentication])
+@permission_classes([IsAuthenticated])
+def startConversation(request):
+    user1_id = request.data.get("user1_id")
+    user2_id = request.data.get("user2_id")
+
+    if not user1_id or not user2_id:
+        return Response({"Error: Both user IDs are required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    user1 = User.objects.get(id=user1_id)
+    user2 = User.objects.get(id=user2_id)
+
+    conversation = Conversation.objects.filter(participants=user1).filter(participants=user2).first()
+
+    if not conversation:
+        conversation = Conversation.objects.create()
+        conversation.participants.add(user1, user2)
+
+    serializer = ConversationModelSerializer(conversation)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@ratelimit(key='ip', rate='20/m', block=True)
+@api_view(['POST'])
+@authentication_classes([SupabaseAuthentication])
+@permission_classes([IsAuthenticated])
+def addPersonToConversation(request, conversation_id):
+    conversation = Conversation.objects.get(id=conversation_id)
+    user_id = request.data.get("user_id")
+
+    if not user_id:
+        return Response({"Error: User ID is required to preform this action"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    user = User.objects.get(id=user_id)
+
+    if user in conversation.participants.all():
+        return Response({"Message: User is already in the conversation"}, status=status.HTTP_400_BAD_REQUEST)
+    conversation.participants.add(user)
+    conversation.save()
+    serializer = ConversationModelSerializer(conversation)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@ratelimit(key='ip', rate='10/m', block=True)
+@api_view(['GET'])
+@authentication_classes([SupabaseAuthentication])
+@permission_classes([IsAuthenticated])
+def getMessages(request, conversation_id):
+    conversation = Conversation.objects.get(id=conversation_id)
+
+    if request.user not in conversation.participants.all():
+        return Response({"Error: You are not a participant in this conversation"}, status=status.HTTP_403_FORBIDDEN)
+    messages = Message.objects.filter(conversation=conversation).order_by('timestamp')
+    serializer = MessageModelSerializer(messages, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@ratelimit(key='ip', rate='20/m', block=True)
+@api_view(['POST'])
+@authentication_classes([SupabaseAuthentication])
+@permission_classes([IsAuthenticated])
+def sendMessage(request, conversation_id):
+    conversation = Conversation.objects.get(id=conversation_id)
+    sender = request.user
+    text = request.data.get("text")
+
+    if not text:
+        return Response({"Error: input cannot be empty"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    message = Message.objects.create(conversation=conversation, sender=sender, text=text)
+    serializer = MessageModelSerializer(message)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 @ratelimit(key='ip', rate='50/m', block=True)
 @api_view(['POST'])
