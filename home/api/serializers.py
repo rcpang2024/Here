@@ -47,12 +47,17 @@ class CommentModelSerializer(serializers.ModelSerializer):
     
 class ConversationModelSerializer(serializers.ModelSerializer):
     participants = serializers.SerializerMethodField()
+    formatted_timestamp = serializers.SerializerMethodField()
     class Meta:
         model = Conversation
-        fields = ['id', 'participants', 'created_at', 'last_message_at']
+        fields = ['id', 'participants', 'created_at', 'last_message_at', 'formatted_timestamp']
     
     def get_participants(self, obj):
         return [user.username for user in obj.participants.all()]
+
+    # Format the field: last_message_at
+    def get_formatted_timestamp(self, obj):
+        return obj.last_message_at.strftime('%m-%d-%Y %I:%M %p')
 
 class MessageModelSerializer(serializers.ModelSerializer):
     sender_username = serializers.CharField(source='sender.username', read_only=True)
@@ -62,9 +67,12 @@ class MessageModelSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ['conversation', 'sender', 'sender_username', 'sender_photo', 'text', 'media', 
+        fields = ['id', 'conversation', 'sender', 'sender_username', 'sender_photo', 'text', 'media', 
                   'timestamp', 'formatted_timestamp', 'is_read', 'reply_to', 'reply_to_message'
         ]
+        extra_kwargs = {
+            'media': {'required': False}
+        }
 
     def get_formatted_timestamp(self, obj):
         return obj.timestamp.strftime('%m-%d-%Y %I:%M %p')

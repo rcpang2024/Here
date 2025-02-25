@@ -680,6 +680,24 @@ def startConversation(request):
     serializer = ConversationModelSerializer(conversation)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+@ratelimit(key='ip', rate='5/m', block=True)
+@api_view(['DELETE'])
+@authentication_classes([SupabaseAuthentication])
+@permission_classes([IsAuthenticated])
+def deleteConversation(request, conversation_id):
+    try:
+        conversation = Conversation.objects.get(id=conversation_id)
+
+        if request.user not in conversation.participants.all():
+            return Response({"error": "You are not a participant in this conversation"}, status=status.HTTP_403_FORBIDDEN)
+
+        conversation.delete()
+        return Response({"message": "Successfully deleted conversation"}, status=status.HTTP_200_OK)
+    except Conversation.DoesNotExist:
+        return Response({"error": "Conversation not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 @ratelimit(key='ip', rate='20/m', block=True)
 @api_view(['POST'])
 @authentication_classes([SupabaseAuthentication])
@@ -720,14 +738,35 @@ def getMessages(request, conversation_id):
 def sendMessage(request, conversation_id):
     conversation = Conversation.objects.get(id=conversation_id)
     sender = request.user
-    text = request.data.get("text")
+    text = request.data.get("text", "")
+    media = request.FILES.get("media")
 
-    if not text:
+
+    if not text and not media:
         return Response({"Error: input cannot be empty"}, status=status.HTTP_400_BAD_REQUEST)
     
-    message = Message.objects.create(conversation=conversation, sender=sender, text=text)
+    message = Message.objects.create(conversation=conversation, sender=sender, text=text, media=media)
     serializer = MessageModelSerializer(message)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+@ratelimit(key='ip', rate='5/m', block=True)
+@api_view(['DELETE'])
+@authentication_classes([SupabaseAuthentication])
+@permission_classes([IsAuthenticated])
+def deleteMessage(request, message_id):
+    try:
+        message = Message.objects.get(id=message_id)
+        print(f"Request user: {request.user}")
+        print(f"Message sender: {message.sender}")
+        if request.user != message.sender:
+            return Response({"error": "You did not create this message "}, status=status.HTTP_403_FORBIDDEN)
+
+        message.delete()
+        return Response({"message": "Successfully deleted message"}, status=status.HTTP_200_OK)
+    except Message.DoesNotExist:
+        return Response({"error": "Message not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 @ratelimit(key='ip', rate='50/m', block=True)
 @api_view(['POST'])
