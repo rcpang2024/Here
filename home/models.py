@@ -19,11 +19,10 @@ class User(models.Model):
         ('private', 'private')
     }
     username = models.CharField(max_length=100, unique=True, blank=False)
-    # password = models.CharField(max_length=50, blank=False)
     name = models.CharField(max_length=100, blank=False)
-    email = models.CharField(max_length=100, unique=True, blank=False) # In the future update to EmailField
+    # email = models.CharField(max_length=100, unique=True, blank=False)
+    email = models.EmailField(max_length=128, unique=True, blank=False, db_index=True)
     bio = models.TextField(max_length=1000, default='', blank=True)
-    # profile_pic = models.ImageField(null=True, blank=True)
     profile_pic = models.CharField(max_length=255, null=True, blank=True)
     list_of_followers = models.ManyToManyField('self', symmetrical=False, related_name='following', blank=True)
     list_of_following = models.ManyToManyField('self', symmetrical=False, related_name='followers', blank=True)

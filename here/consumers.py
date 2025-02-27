@@ -28,8 +28,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         data = json.loads(text_data)
-        message = data['message']
+        # message = data['message']
+        # maybe change back to not using get? - now empty messages being returned
+        message = data.get('message', '')
         sender_username = data['sender']
+        media_url = data.get('media', None)
 
         try:
             sender = await sync_to_async(User.objects.get)(username=sender_username)
@@ -41,7 +44,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return  # Prevents crashing
 
         conversation = await sync_to_async(Conversation.objects.get)(id=self.conversation_id)
-        message_obj = await sync_to_async(Message.objects.create)(conversation=conversation, sender=sender, text=message)
+        message_obj = await sync_to_async(Message.objects.create)(conversation=conversation, sender=sender, text=message, media=media_url)
 
         await self.channel_layer.group_send(
             self.room_group_name,
@@ -49,6 +52,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'type': 'chat_message',
                 'sender': sender.username,
                 'message': message,
+                'media': media_url if media_url else None,
                 'timestamp': message_obj.timestamp.strftime('%m-%d-%Y %I:%M %p')
             }
         )
@@ -57,5 +61,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'sender': event['sender'],
             'message': event['message'],
+            'media': event['media'],
             'timestamp': event['timestamp']
         }))
