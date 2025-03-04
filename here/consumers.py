@@ -33,7 +33,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         message = data.get('message', '')
         sender_username = data['sender']
         media_url = data.get('media', None)
-
+        print("message: ", message)
+        print("sender_username: ", sender_username)
+        print("media_url: ", media_url)
         try:
             sender = await sync_to_async(User.objects.get)(username=sender_username)
         except User.DoesNotExist:

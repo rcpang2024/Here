@@ -23,7 +23,7 @@ class User(models.Model):
     # email = models.CharField(max_length=100, unique=True, blank=False)
     email = models.EmailField(max_length=128, unique=True, blank=False, db_index=True)
     bio = models.TextField(max_length=1000, default='', blank=True)
-    profile_pic = models.CharField(max_length=255, null=True, blank=True)
+    profile_pic = models.CharField(max_length=512, null=True, blank=True)
     list_of_followers = models.ManyToManyField('self', symmetrical=False, related_name='following', blank=True)
     list_of_following = models.ManyToManyField('self', symmetrical=False, related_name='followers', blank=True)
     user_type = models.CharField(max_length=50, choices=USER_TYPE, default='individual')
@@ -137,10 +137,16 @@ class Message(models.Model):
     conversation = models.ForeignKey(Conversation, related_name='messages', on_delete=models.CASCADE)
     sender = models.ForeignKey(User, related_name='message_sender', on_delete=models.CASCADE)
     text = models.TextField(blank=True, null=True)
-    media = models.FileField(upload_to='messages/', blank=True, null=True)
+    media = models.FileField(upload_to='messages/', max_length=512,blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
     reply_to = models.ForeignKey('self', blank=True, null=True, related_name='replies', on_delete=models.CASCADE)
+
+    def save(self, *args, **kwargs):
+        """Override save method to update last_message_at in conversation"""
+        super().save(*args, **kwargs)
+        self.conversation.last_message_at = self.timestamp
+        self.conversation.save(update_fields=['last_message_at'])
 
     def __str__(self):
         return f"Message from {self.sender} at {self.timestamp.strftime('%d-%m-%Y')}"
