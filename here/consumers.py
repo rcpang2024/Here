@@ -30,12 +30,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         # message = data['message']
         # maybe change back to not using get? - now empty messages being returned
-        message = data.get('message', '')
-        sender_username = data['sender']
+        text = data.get('text', '')
+        sender_username = data['sender_username']
         media_url = data.get('media', None)
-        print("message: ", message)
-        print("sender_username: ", sender_username)
-        print("media_url: ", media_url)
+
         try:
             sender = await sync_to_async(User.objects.get)(username=sender_username)
         except User.DoesNotExist:
@@ -46,14 +44,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return  # Prevents crashing
 
         conversation = await sync_to_async(Conversation.objects.get)(id=self.conversation_id)
-        message_obj = await sync_to_async(Message.objects.create)(conversation=conversation, sender=sender, text=message, media=media_url)
-
+        message_obj = await sync_to_async(Message.objects.create)(conversation=conversation, sender=sender, text=text, media=media_url)
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'chat_message',
-                'sender': sender.username,
-                'message': message,
+                'sender_username': sender.username,
+                'text': text,
                 'media': media_url if media_url else None,
                 'timestamp': message_obj.timestamp.strftime('%m-%d-%Y %I:%M %p')
             }
@@ -61,8 +58,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({
-            'sender': event['sender'],
-            'message': event['message'],
+            'sender_username': event['sender_username'],
+            'text': str(event['text']),
             'media': event['media'],
             'timestamp': event['timestamp']
         }))
